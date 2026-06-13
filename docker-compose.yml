@@ -42,6 +42,7 @@ services:
       - refresh-token-renewer
       - hosxp-api
       - authorized-server
+      - webhook
 
   # Public Route Service
   public:
@@ -155,6 +156,18 @@ services:
       - ./jwt/authorized-server/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
       - ./module/tokenGenerator.js:/usr/src/app/module/tokenGenerator.js
       - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js
+
+# --- New LINE Bot Service ---
+  webhook:
+    <<: *node-service
+    build:
+      context: ./webhook
+      dockerfile: Dockerfile
+    container_name: webhook
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/webhook/webhook.crt:/usr/src/app/ssl/webhook.crt:ro
+      - ./ssl/webhook/webhook.key:/usr/src/app/ssl/webhook.key:ro
 
   redis-token:
     image: redis:alpine # Note: Updated from 8.8.0-alpine (which doesn't exist standardly yet) to alpine

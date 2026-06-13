@@ -4,7 +4,7 @@
 set -euo pipefail
 
 # Configuration variables (readonly prevents accidental overwrites)
-readonly CONTAINER_LIST=("public" "login" "logout" "nutrition" "refresh-token-renewer" "hosxp-api" "authorized-server")
+readonly CONTAINER_LIST=("public" "login" "logout" "nutrition" "refresh-token-renewer" "hosxp-api" "authorized-server" "webhook")
 readonly COMBINE_CERT="combine_ssl.pem"
 
 # 2. INPUT VALIDATION: Ensure target directory is provided

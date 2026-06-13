@@ -41,11 +41,11 @@ const verifyToken = async (req, res, next) => {
         const cookieOptions = { httpOnly: true, sameSite: 'lax' };
 
         // Set new cookies
-        res.cookie('access_token', accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 }); // 15 mins
-        res.cookie('refresh_token', refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 }); // 7 days
+        res.cookie('access_token', accessToken, { ...cookieOptions, maxAge: 900000 }); // 15 mins
+        res.cookie('refresh_token', refreshToken, { ...cookieOptions, maxAge: 604800000 }); // 7 days
         res.cookie('profile', payload, { 
           httpOnly: false, // Allows client-side JS to read it
-          maxAge: 900000   // Optional: Cookie expires in 15 minutes
+          maxAge: 604800000   // 7 days
         });     
 
         return res.redirect(callbackUrl); // Success! Proceed to the protected route

@@ -74,7 +74,7 @@ app.post('/password', verifyToken, async (req, res) => {
 
   res.cookie('profile', result.enrichedProfile, {
     httpOnly: false,
-    maxAge: 900000 // 15 mins
+    maxAge: 604800000 // 7 days
   });
 
   res.status(200).redirect(callbackUrl);
@@ -123,7 +123,7 @@ app.get('/providerID', verifyToken, async (req, res) => {
 
   res.cookie('profile', result.enrichedProfile, {
     httpOnly: false,
-    maxAge: 900000 // 15 mins
+    maxAge: 604800000 // 7 days
   });
 
   res.status(200).redirect(callbackUrl);
