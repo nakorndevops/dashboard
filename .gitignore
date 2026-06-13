@@ -150,4 +150,5 @@ vite.config.ts.timestamp-*
 *.crt
 
 # jwt
-.jwt
+*.jwt
+
