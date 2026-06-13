@@ -1,0 +1,16 @@
+{
+  "name": "refresh-token-renewer",
+  "version": "1.0.0",
+  "description": "refresh-token-renewer",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^14.0.0",
+    "redis": "^6.0.0"
+  }
+}

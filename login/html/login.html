@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Health Department Login</title>
+    <link rel="icon" href="/login/image/favicon.ico" type="image/x-icon">
+    
+    <style>
+        /* CSS for a responsive, fixed-screen layout */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100dvh; /* Dynamic viewport height locks the screen */
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+            overflow: hidden; /* Absolutely no scrolling on the page */
+        }
+
+        .login-container {
+            background: white;
+            /* clamp(min, preferred, max) scales padding based on screen height */
+            padding: clamp(1rem, 4vh, 2.5rem);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 350px;
+            text-align: center;
+            box-sizing: border-box;
+            overflow: hidden; /* Absolutely no scrolling inside the box */
+        }
+
+        .login-container > img {
+            max-width: 120px;
+            width: auto;
+            /* Prevents the logo from taking up too much vertical space */
+            max-height: clamp(50px, 12vh, 120px); 
+            margin-bottom: clamp(0.5rem, 3vh, 1.5rem);
+            object-fit: contain;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: clamp(1.2rem, 3.5vh, 1.5rem);
+            margin-bottom: clamp(0.5rem, 3vh, 1.5rem);
+        }
+
+        .form-group {
+            margin-bottom: clamp(0.5rem, 2.5vh, 1.2rem);
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: clamp(0.2rem, 1vh, 0.5rem);
+            color: #555;
+            font-weight: 500;
+            font-size: clamp(0.85rem, 2vh, 1rem);
+        }
+
+        input[type="text"], 
+        input[type="password"] {
+            width: 100%;
+            /* Inputs shrink slightly on short screens */
+            padding: clamp(0.5rem, 1.5vh, 0.75rem);
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: clamp(0.9rem, 2vh, 1rem);
+        }
+
+        input[type="text"]:focus, 
+        input[type="password"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: clamp(0.5rem, 1.5vh, 0.75rem);
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: clamp(0.9rem, 2vh, 1rem);
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #a0c4ff;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            color: #d93025;
+            margin-top: clamp(0.5rem, 2vh, 1rem);
+            font-size: clamp(0.8rem, 1.5vh, 0.9rem);
+            display: none;
+        }
+
+        .divider {
+            display: none; 
+            align-items: center;
+            text-align: center;
+            color: #888;
+            margin: clamp(0.5rem, 2.5vh, 1.5rem) 0;
+            font-size: clamp(0.8rem, 1.5vh, 0.9rem);
+        }
+        
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .divider:not(:empty)::before { margin-right: .5em; }
+        .divider:not(:empty)::after { margin-left: .5em; }
+
+        .provider-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            text-decoration: none;
+            transition: transform 0.2s ease;
+        }
+
+        .provider-btn:hover {
+            transform: scale(1.03);
+        }
+
+        .provider-btn img {
+            max-width: 100%;
+            height: auto;
+            max-height: clamp(40px, 8vh, 60px); /* Keeps the image button scaled properly */
+            object-fit: contain;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <img src="/login/image/TrangHosLogo.png" alt="Hospital Logo">
+        <h2>Digital Health Login</h2>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" id="sendBtn">Login</button>
+            <div id="errorMessage" class="error-message">Login failed. Please verify your credentials.</div>
+        </form>
+
+        <div id="providerDivider" class="divider">OR</div>
+        <div id="providerLoginContainer"></div>
+    </div>
+
+<script>
+        const mainUrl = window.location.origin;
+        document.addEventListener('DOMContentLoaded', async function () {
+            const redirectUrl = mainUrl+'/login/providerID';
+            const providerIdUrl = 'https://moph.id.th/oauth/redirect';
+            const container = document.getElementById('providerLoginContainer');
+            const divider = document.getElementById('providerDivider');
+
+            try {
+                // Load clientID safely
+                const getClientId = await fetch('/login/clientID', { method: 'GET' });
+                
+                if (!getClientId.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const clientIdData = await getClientId.json();            
+
+                // Ensure clientID exists before generating the link
+                if (clientIdData && clientIdData.clientID) {
+                    // Create providerId Link
+                    const providerIdLink = `${providerIdUrl}?client_id=${clientIdData.clientID}&redirect_uri=${redirectUrl}&response_type=code`;
+                    
+                    // Create Anchor tag
+                    const linkElement = document.createElement('a');
+                    linkElement.href = providerIdLink;
+                    linkElement.className = 'provider-btn';
+                    linkElement.title = 'เข้าสู่ระบบด้วย providerID';
+
+                    // Create Image tag
+                    const imgElement = document.createElement('img');
+                    imgElement.src = '/login/image/PROVIDERID_Login.png';
+                    imgElement.alt = 'เข้าสู่ระบบด้วย providerID';
+
+                    // Assemble and inject into DOM
+                    linkElement.appendChild(imgElement);
+                    container.appendChild(linkElement);
+                    
+                    // Reveal the visual divider
+                    divider.style.display = 'flex';
+                }
+            } catch (error) {
+                console.warn('Failed to load Provider ID configuration. Button will not be displayed.', error);
+            }
+        });    
+
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const usernameInput = document.getElementById('username').value;
+            const passwordInput = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const sendBtn = document.getElementById('sendBtn');
+
+            errorMessage.style.display = 'none';
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+
+            const payload = {
+                username: usernameInput,
+                password: passwordInput
+            };
+
+            const authEndpoint = '/login/password';
+
+            try {
+                const response = await fetch(authEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 200) {
+                    window.location.href = '/food';
+                } else {
+                    const data = await response.json();
+                    errorMessage.textContent = data.error || 'Login failed. Please try again.';
+                    errorMessage.style.display = 'block';
+                    
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = 'Login';
+                }
+            } catch (error) {
+                console.error('Error during fetch:', error);
+                errorMessage.textContent = 'Network error. Please check your connection.';
+                errorMessage.style.display = 'block';
+                
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Login';
+            }
+        });
+    </script>
+
+</body>
+</html>

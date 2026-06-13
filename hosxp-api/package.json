@@ -1,0 +1,15 @@
+{
+  "name": "hosxp-api",
+  "version": "1.0.0",
+  "description": "API service for connecting to external HOSxP Database",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.14.3"
+  }
+}

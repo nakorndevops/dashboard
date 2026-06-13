@@ -1,0 +1,270 @@
+services:
+  # Proxy Server - The ONLY service exposing ports
+  proxy-server:
+    image: nginx:alpine
+    container_name: proxy-server
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - TZ=Asia/Bangkok
+    volumes:
+      - ./proxy-server/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl/tranghos-ssl/tranghos.moph.go.th.crt:/etc/nginx/ssl/proxy-server.crt:ro
+      - ./ssl/tranghos-ssl/tranghos.moph.go.th.key:/etc/nginx/ssl/proxy-server.key:ro
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Public Route Service
+  public:
+    build:
+      context: ./public
+      dockerfile: Dockerfile
+    container_name: public
+    # ports removed for security
+    user: "node"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          memory: 128M
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/public/public.crt:/usr/src/app/ssl/public.crt:ro
+      - ./ssl/public/public.key:/usr/src/app/ssl/public.key:ro
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Bangkok
+      - NODE_EXTRA_CA_CERTS=/usr/src/app/ssl/combine_ssl.pem
+    depends_on:
+      proxy-server:
+        condition: service_started
+    networks:
+      - app-network
+
+  # Login Frontend
+  login:
+    build:
+      context: ./login
+      dockerfile: Dockerfile
+    container_name: login
+    # ports removed for security
+    user: "node"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          memory: 128M
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/login/login.crt:/usr/src/app/ssl/login.crt:ro
+      - ./ssl/login/login.key:/usr/src/app/ssl/login.key:ro
+      - ./key/access-token/public.pem:/usr/src/app/access-token/public.pem:ro
+      - ./jwt/login/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
+      - ./module/continueIfNotLogin.js:/usr/src/app/module/continueIfNotLogin.js
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Bangkok
+      - NODE_EXTRA_CA_CERTS=/usr/src/app/ssl/combine_ssl.pem
+    depends_on:
+      proxy-server:
+        condition: service_started
+    networks:
+      - app-network
+
+  # Food Frontend
+  nutrition:
+    build:
+      context: ./nutrition
+      dockerfile: Dockerfile
+    container_name: nutrition
+    # ports removed for security
+    user: "node"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          memory: 128M
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/nutrition/nutrition.crt:/usr/src/app/ssl/nutrition.crt:ro
+      - ./ssl/nutrition/nutrition.key:/usr/src/app/ssl/nutrition.key:ro
+      - ./key/access-token/public.pem:/usr/src/app/access-token/public.pem:ro
+      - ./jwt/nutrition/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
+      - ./module/continueIfLogin.js:/usr/src/app/module/continueIfLogin.js
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Bangkok
+      - NODE_EXTRA_CA_CERTS=/usr/src/app/ssl/combine_ssl.pem
+    depends_on:
+      proxy-server:
+        condition: service_started
+    networks:
+      - app-network
+
+  # Logout
+  logout:
+    build:
+      context: ./logout
+      dockerfile: Dockerfile
+    container_name: logout
+    # ports removed for security
+    user: "node"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          memory: 128M
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/logout/logout.crt:/usr/src/app/ssl/logout.crt:ro
+      - ./ssl/logout/logout.key:/usr/src/app/ssl/logout.key:ro
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Bangkok
+      - NODE_EXTRA_CA_CERTS=/usr/src/app/ssl/combine_ssl.pem
+    depends_on:
+      proxy-server:
+        condition: service_started
+    networks:
+      - app-network
+
+  # Refresh Token Renewer Service
+  refresh-token-renewer:
+    build:
+      context: ./refresh-token-renewer
+      dockerfile: Dockerfile
+    container_name: refresh-token-renewer
+    # ports removed for security
+    user: "node"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          memory: 128M
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/refresh-token-renewer/refresh-token-renewer.crt:/usr/src/app/ssl/refresh-token-renewer.crt:ro
+      - ./ssl/refresh-token-renewer/refresh-token-renewer.key:/usr/src/app/ssl/refresh-token-renewer.key:ro
+      - ./key/refresh-token/private.pem:/usr/src/app/refresh-token/private.pem:ro
+      - ./key/refresh-token/public.pem:/usr/src/app/refresh-token/public.pem:ro
+      - ./key/access-token/private.pem:/usr/src/app/access-token/private.pem:ro
+      - ./key/api-key/public.pem:/usr/src/app/api-key/public.pem:ro
+      - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Bangkok
+      - NODE_EXTRA_CA_CERTS=/usr/src/app/ssl/combine_ssl.pem
+    depends_on:
+      proxy-server:
+        condition: service_started
+    networks:
+      - app-network
+
+  # HOSxP API Server Service
+  hosxp-api:
+    build:
+      context: ./hosxp-api
+      dockerfile: Dockerfile
+    container_name: hosxp-api
+    # ports removed for security
+    user: "node"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          memory: 128M
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/hosxp-api/hosxp-api.crt:/usr/src/app/ssl/hosxp-api.crt:ro
+      - ./ssl/hosxp-api/hosxp-api.key:/usr/src/app/ssl/hosxp-api.key:ro
+      - ./key/api-key/public.pem:/usr/src/app/api-key/public.pem:ro
+      - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Bangkok
+      - NODE_EXTRA_CA_CERTS=/usr/src/app/ssl/combine_ssl.pem
+    depends_on:
+      proxy-server:
+        condition: service_started
+    networks:
+      - app-network
+
+  # Authorized Server
+  authorized-server:
+    build:
+      context: ./authorized-server
+      dockerfile: Dockerfile
+    container_name: authorized-server
+    # ports removed for security
+    user: "node"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          memory: 128M
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/authorized-server/authorized-server.crt:/usr/src/app/ssl/authorized-server.crt:ro
+      - ./ssl/authorized-server/authorized-server.key:/usr/src/app/ssl/authorized-server.key:ro
+      - ./key/refresh-token/private.pem:/usr/src/app/refresh-token/private.pem:ro
+      - ./key/access-token/private.pem:/usr/src/app/access-token/private.pem:ro
+      - ./key/api-key/public.pem:/usr/src/app/api-key/public.pem:ro
+      - ./jwt/authorized-server/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
+      - ./module/tokenGenerator.js:/usr/src/app/module/tokenGenerator.js
+      - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js
+    environment:
+      - NODE_ENV=production
+      - TZ=Asia/Bangkok
+      - NODE_EXTRA_CA_CERTS=/usr/src/app/ssl/combine_ssl.pem
+    depends_on:
+      proxy-server:
+        condition: service_started
+    networks:
+      - app-network
+
+  redis-token:
+    image: redis:8.8.0-alpine
+    container_name: redis-token
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis-token/redis.conf:/usr/local/etc/redis/redis.conf
+      - redis-data:/data
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    restart: unless-stopped
+    networks:
+      - app-network    
+
+# Volume
+volumes:
+  redis-data:
+    driver: local
+
+# Network
+networks:
+  app-network:
+    name: app-network
+    driver: bridge

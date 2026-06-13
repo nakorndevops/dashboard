@@ -1,0 +1,14 @@
+{
+  "name": "nutrition",
+  "version": "1.0.0",
+  "description": "Nutrition",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "cookie-parser": "^1.4.7"
+  }
+}

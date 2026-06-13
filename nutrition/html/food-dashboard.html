@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Kitchen Dashboard</title>
+    <link rel="icon" href="/food/image/favicon.ico" type="image/x-icon">
+    <style>
+        :root {
+            --primary-bg: #f1f5f9;
+            --header-bg: #ffffff;
+            --table-header-bg: #e2e8f0;
+            --border-color: #cbd5e1;
+            --row-even: #f8fafc;
+            --row-odd: #ffffff;
+            --text-main: #334155;
+            --primary-color: #0284c7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Section */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--header-bg);
+            padding: 10px 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand img {
+            height: 50px;
+        }
+
+        .profile-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .profile-info {
+            text-align: right;
+        }
+
+        .profile-info strong {
+            display: block;
+            font-size: 14px;
+        }
+
+        .profile-info span {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .logout-btn {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .logout-btn:hover {
+            background-color: #dc2626;
+        }
+
+        /* Filter Section */
+        .filters {
+            display: flex;
+            gap: 20px;
+            padding: 20px 24px 10px;
+            background-color: var(--primary-bg);
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Type Checkbox Section */
+        .type-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 0 24px 20px;
+            background-color: var(--primary-bg);
+            align-items: center;
+        }
+
+        .checkbox-group-container {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--text-main);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+
+        .filter-divider {
+            width: 2px;
+            height: 24px;
+            background-color: var(--border-color);
+            margin: 0 8px;
+        }
+
+
+        /* Custom Searchable Dropdown */
+        .custom-select-container {
+            position: relative;
+            width: 300px;
+        }
+
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            border-color: var(--primary-color);
+        }
+
+        .custom-select-list {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            max-height: 250px;
+            overflow-y: auto;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            list-style: none;
+        }
+
+        .custom-select-list li {
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .custom-select-list li:last-child {
+            border-bottom: none;
+        }
+
+        .custom-select-list li:hover {
+            background-color: var(--primary-bg);
+            color: var(--primary-color);
+        }
+
+        /* Table Container */
+        .table-container {
+            height: 75vh;
+            overflow-y: auto;
+            overflow-x: auto;
+            margin: 0 24px 24px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+
+
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+
+        /* Table Headers & Cells */
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+            font-size: 14px;
+        }
+
+        /* Zebra Striping */
+        tbody tr {
+            background-color: var(--row-odd);
+            transition: background 0.2s;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: var(--row-even);
+        }
+
+        tbody tr:hover {
+            background-color: #e0f2fe;
+        }
+
+        td {
+            background-color: inherit;
+        }
+
+        /* HN Button */
+        .hn-btn {
+            background-color: #f0f9ff;
+            color: #0284c7;
+            border: 1px solid #38bdf8;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .hn-btn:hover {
+            background-color: #e0f2fe;
+            border-color: #0284c7;
+        }
+
+        /* Sticky Logic */
+        thead th {
+            position: sticky;
+            top: 0;
+            background-color: var(--table-header-bg);
+            z-index: 10;
+            border-bottom: 2px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        .freeze-1 {
+            position: sticky;
+            left: 0;
+            /* Strictly lock this column to 120px so it never pushes into column 2 */
+            width: 120px;
+            min-width: 120px;
+            max-width: 120px;
+            z-index: 5;
+            border-right: 1px solid var(--border-color);
+            background-clip: padding-box;
+            /* Fixes the border overlap glitch */
+        }
+
+        .freeze-2 {
+            position: sticky;
+            /* This offset matches the exact locked width of freeze-1 */
+            left: 120px;
+            /* Kept flexible! Just a min-width, it can grow as wide as it needs to */
+            min-width: 200px;
+            z-index: 5;
+            border-right: 2px solid var(--border-color);
+            background-clip: padding-box;
+        }
+
+        thead th.freeze-1,
+        thead th.freeze-2 {
+            z-index: 15;
+        }
+
+        .lab-date {
+            color: #64748b;
+            font-size: 11px;
+            margin-top: 4px;
+            display: block;
+        }
+
+        #loading {
+            padding: 24px;
+            text-align: center;
+            display: none;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* Timestamp Display */
+
+        /*
+            #timestampDisplay {
+            text-align: right;
+            margin: 0 24px 10px;
+            font-size: 14px;
+            color: #475569;
+            font-weight: 600;
+            display: none;
+        }
+        */
+
+        #tableContainer {
+            margin: 0 24px 10px;
+            font-size: 14px;
+            color: #475569;
+            font-weight: 600;
+        }
+
+        #timestampDisplay {
+            float: right;
+            display: none;
+        }
+
+        #duplicateDisplay {
+            float: left;
+            display: none;
+        }
+
+        /* Print Button */
+        .print-btn {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .print-btn:hover {
+            background-color: #2563eb;
+        }
+
+        .print-btn:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Mini Print Button */
+        .print-mini-btn {
+            background-color: white;
+            color: #3b82f6;
+            border: 2px solid #3b82f6;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .print-mini-btn:hover {
+            background-color: #eff6ff;
+        }
+
+        .print-mini-btn:disabled {
+            border-color: #9ca3af;
+            color: #9ca3af;
+            cursor: not-allowed;
+            background-color: white;
+        }
+
+        /* Label Print Button */
+        .print-label-btn {
+            background-color: white;
+            color: #f97316;
+            border: 2px solid #f97316;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .print-label-btn:hover {
+            background-color: #fff7ed;
+        }
+
+        .print-label-btn:disabled {
+            border-color: #9ca3af;
+            color: #9ca3af;
+            cursor: not-allowed;
+            background-color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="brand">
+            <img src="/image/TrangHosLogo.png" alt="Hospital Logo"
+                onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCI+PHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjY2NjIi8+PC9zdmc+'">
+            <h2 id="mainTitle">รายการอาหารผู้ป่วย โรงพยาบาลตรัง</h2>
+        </div>
+        <div class="profile-section">
+            <div class="profile-info">
+                <strong id="userName">Loading...</strong>
+                <span id="userPos"></span>
+            </div>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </header>
+
+    <div class="filters">
+        <div class="filter-group">
+            <label for="wardSearch">หอผู้ป่วย</label>
+            <div class="custom-select-container" id="wardDropdownContainer">
+                <input type="text" id="wardSearch" placeholder="Search by name or shortname..." autocomplete="off">
+                <ul id="wardList" class="custom-select-list"></ul>
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label for="mealSelect">มื้ออาหาร</label>
+            <select id="mealSelect">
+                <option value="" disabled selected>Select Meal...</option>
+            </select>
+        </div>
+
+        <button id="printBtn" class="print-btn" disabled>
+            🧪 พิมพ์อาหาร+Lab
+        </button>
+
+        <button id="printMiniBtn" class="print-mini-btn" disabled>
+            📄 พิมพ์อาหาร
+        </button>
+
+        <button id="printMini2Btn" class="print-mini-btn" disabled>
+            💲 พิมพ์ลดกระดาษ
+        </button>
+
+        <button id="printLabelBtn" class="print-label-btn" disabled>
+            🏷️ พิมพ์ Label
+        </button>
+    </div>
+
+    <div class="type-filters">
+        <div class="checkbox-group-container">
+            <span style="font-weight: 600; font-size: 14px;"></span>
+            <label class="checkbox-item">
+                <input type="checkbox" id="chkReligionNormal" checked> ปกติ
+            </label>
+            <label class="checkbox-item">
+                <input type="checkbox" id="chkReligionHalal" checked> Halal
+            </label>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="checkbox-group-container">
+            <span style="font-weight: 600; font-size: 14px;"></span>
+            <div id="typeCheckboxContainer" style="display: flex; gap: 16px; flex-wrap: wrap;"></div>
+        </div>
+    </div>
+
+    <div id="loading"></div>
+
+    <div id="tableContainer">
+        <div id="duplicateDisplay"></div>
+        <div id="timestampDisplay"></div>
+    </div>
+
+    <div class="table-container">
+        <table id="foodTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <span id="duplicateTitle" style="margin: 0 24px 10px; display: none; color: #dc2626; font-size: 16px;">
+        <strong>
+            ⚠️ รายชื่อผู้ป่วยสั่งอาหารซ้ำ <a style="color: #3b82f6; font-size: 16px;" href="#top">Click
+                เพื่อกลับไปตารางอาหาร</a>
+        </strong>
+    </span>
+
+
+    <div class="table-container" id="duplicateContainer"
+        style="display: none; border-color: #fca5a5; margin-bottom: 24px;">
+        <table id="duplicateTable">
+            <thead id="dupTableHead"></thead>
+            <tbody id="dupTableBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let allWards = [];
+        let allMeals = [];
+        let allNutritionTypes = [];
+        let selectedTypeCodes = new Set();
+        let selectedWardId = null;
+        let selectedMealId = null;
+        let lastFetchDateObj = null;
+        let lastFetchTimeMs = 0;
+        let currentRawData = [];
+        //let raw = [];
+
+        // Religion Filter State
+        let showReligionNormal = true;
+        let showReligionHalal = true;
+
+        function updateHeaderDate() {
+            const today = new Date();
+            const dateTitleStr = today.toLocaleDateString('th-TH', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+            document.getElementById('mainTitle').textContent = `รายการอาหารผู้ป่วย โรงพยาบาลตรัง วันที่ ${dateTitleStr}`;
+        }
+
+        function updateTimestampDisplay(rowCount) {
+            if (!lastFetchDateObj) return;
+            const day = lastFetchDateObj.getDate();
+            const monthName = lastFetchDateObj.toLocaleDateString('th-TH', { month: 'long' });
+            const yearTh = lastFetchDateObj.toLocaleDateString('th-TH', { year: 'numeric' });
+            const timeFull = lastFetchDateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            const timestampStr = `ข้อมูล ณ วันที่ ${day} ${monthName} ${yearTh} เวลา ${timeFull} น. (ใช้เวลาดึงข้อมูล ${lastFetchTimeMs} ms) แสดงข้อมูลทั้งหมด ${rowCount} รายการ`;
+
+            const tsDisplay = document.getElementById('timestampDisplay');
+            tsDisplay.textContent = timestampStr;
+            tsDisplay.style.display = 'block';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateHeaderDate();
+            setInterval(updateHeaderDate, 60000);
+
+            loadUserProfile();
+            fetchWards();
+            fetchMeals();
+            fetchNutritionTypes();
+            setupWardDropdown();
+
+            // Religion Checkbox Listeners
+            document.getElementById('chkReligionNormal').addEventListener('change', (e) => {
+                showReligionNormal = e.target.checked;
+                if (currentRawData && currentRawData.length > 0) processAndRenderTable(currentRawData);
+            });
+            document.getElementById('chkReligionHalal').addEventListener('change', (e) => {
+                showReligionHalal = e.target.checked;
+                if (currentRawData && currentRawData.length > 0) processAndRenderTable(currentRawData);
+            });
+
+            // Meal Dropdown Listener
+            document.getElementById('mealSelect').addEventListener('change', (e) => {
+                selectedMealId = e.target.value;
+                checkAndFetchFood();
+            });
+        });
+
+        function loadUserProfile() {
+            const cookies = document.cookie.split(';');
+            let profile = { fname: 'Guest', lname: '', position: 'Unknown' };
+
+            for (let c of cookies) {
+                const parts = c.trim().split('=');
+                const key = parts.shift();
+                const value = parts.join('=');
+
+                if (key === 'profile' && value) {
+                    try {
+                        let decodedValue = decodeURIComponent(value);
+                        if (decodedValue.startsWith('j:')) {
+                            decodedValue = decodedValue.substring(2);
+                        }
+                        const parsed = JSON.parse(decodedValue);
+                        profile = { ...profile, ...parsed };
+                    } catch (e) {
+                        console.error("Error parsing profile cookie:", e);
+                    }
+                    break;
+                }
+            }
+
+            document.getElementById('userName').textContent = `${profile.fname} ${profile.lname}`;
+            document.getElementById('userPos').textContent = profile.position;
+        }
+
+        async function fetchWards() {
+            try {
+                const res = await fetch('/food/wardList', { method: 'POST' });
+                allWards = await res.json();
+                allWards.unshift({
+                    "ward": "XX",
+                    "name": "Ward ทั้งหมด",
+                    "shortname": "All ward"
+                });
+            } catch (err) {
+                console.error('Failed to fetch wards', err);
+            }
+        }
+
+        async function fetchMeals() {
+            try {
+                const res = await fetch('/food/mealList', { method: 'POST' });
+                allMeals = await res.json();
+                const mealSelect = document.getElementById('mealSelect');
+                allMeals.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.meal;
+                    opt.textContent = m.name;
+                    mealSelect.appendChild(opt);
+                });
+            } catch (err) {
+                console.error('Failed to fetch meals', err);
+            }
+        }
+
+        async function fetchNutritionTypes() {
+            try {
+                const res = await fetch('/food/nutritionTypeList', { method: 'POST' });
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                allNutritionTypes = await res.json();
+            } catch (err) {
+                console.error('Failed to fetch nutrition types', err);
+            }
+
+            const container = document.getElementById('typeCheckboxContainer');
+            container.innerHTML = '';
+
+            allNutritionTypes.forEach(t => {
+                const label = document.createElement('label');
+                label.className = 'checkbox-item';
+
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = String(t.code);
+
+                if (String(t.code) !== "7") {
+                    cb.checked = true;
+                    selectedTypeCodes.add(String(t.code));
+                }
+
+                cb.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        selectedTypeCodes.add(String(t.code));
+                    } else {
+                        selectedTypeCodes.delete(String(t.code));
+                    }
+
+                    if (currentRawData && currentRawData.length > 0) {
+                        processAndRenderTable(currentRawData);
+                    }
+                });
+
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(' ' + t.name));
+                container.appendChild(label);
+            });
+        }
+
+        function setupWardDropdown() {
+            const searchInput = document.getElementById('wardSearch');
+            const listEl = document.getElementById('wardList');
+            const container = document.getElementById('wardDropdownContainer');
+
+            function renderList(list) {
+                listEl.innerHTML = '';
+                if (list.length === 0) {
+                    listEl.innerHTML = '<li>No wards found</li>';
+                    return;
+                }
+                list.forEach(w => {
+                    const li = document.createElement('li');
+                    li.textContent = w.name;
+                    li.addEventListener('click', () => {
+                        selectedWardId = w.ward;
+                        searchInput.value = w.name;
+                        listEl.style.display = 'none';
+                        checkAndFetchFood();
+                    });
+                    listEl.appendChild(li);
+                });
+            }
+
+            searchInput.addEventListener('focus', () => {
+                listEl.style.display = 'block';
+                renderList(allWards);
+            });
+
+            searchInput.addEventListener('input', (e) => {
+                const kw = e.target.value.toLowerCase();
+                const filtered = allWards.filter(w =>
+                    w.name.toLowerCase().includes(kw) ||
+                    w.shortname.toLowerCase().includes(kw)
+                );
+                renderList(filtered);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!container.contains(e.target)) {
+                    listEl.style.display = 'none';
+                }
+            });
+        }
+
+        async function checkAndFetchFood() {
+            if (!selectedWardId || !selectedMealId) return;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading').textContent = 'Loading patient data...';
+            document.getElementById('tableHead').innerHTML = '';
+            document.getElementById('tableBody').innerHTML = '';
+            document.getElementById('timestampDisplay').style.display = 'none';
+
+            try {
+                const startTime = performance.now();
+
+                const res = await fetch('/food/food', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ward: selectedWardId, meal: parseInt(selectedMealId) })
+                });
+
+                let rawData = await res.json();
+
+                if (res.status !== 200) {
+                    rawData = [];
+                }
+
+                //raw = rawData;
+                currentRawData = rawData;
+
+                const endTime = performance.now();
+
+                lastFetchTimeMs = Math.round(endTime - startTime);
+                lastFetchDateObj = new Date();
+
+                processAndRenderTable(rawData);
+                findAndRenderDuplicates(rawData);
+            } catch (err) {
+                console.error('Failed to fetch food data', err);
+                document.getElementById('loading').textContent = 'Error loading data.';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function formatThaiDate(isoString) {
+            if (!isoString) return '';
+            const d = new Date(isoString);
+            if (isNaN(d)) return '';
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear() + 543;
+            return `${dd}-${mm}-${yyyy}`;
+        }
+
+        function processAndRenderTable(data) {
+            const printBtn = document.getElementById('printBtn');
+            const printMiniBtn = document.getElementById('printMiniBtn');
+            const printMini2Btn = document.getElementById('printMini2Btn');
+            const printLabelBtn = document.getElementById('printLabelBtn');
+
+            if (!data || data.length === 0) {
+                updateTimestampDisplay(0);
+                if (printBtn) printBtn.disabled = true;
+                if (printMiniBtn) printMiniBtn.disabled = true;
+                if (printMini2Btn) printMini2Btn.disabled = true;
+                if (printLabelBtn) printLabelBtn.disabled = true;
+                document.getElementById('tableHead').innerHTML = '';
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="100%" style="text-align:center; padding: 20px;">ไม่พบข้อมูล</td></tr>';
+                return;
+            }
+
+            // 1. Apply Nutrition Type Filter
+            let filteredData = data;
+            if (allNutritionTypes.length > 0) {
+                filteredData = data.filter(row => selectedTypeCodes.has(String(row['type_code'])));
+            }
+
+            // 2. Apply Religion Filter
+            filteredData = filteredData.filter(row => {
+                const isHalal = String(row['religion_code']) === "03";
+                if (isHalal && showReligionHalal) return true;
+                if (!isHalal && showReligionNormal) return true;
+                return false;
+            });
+
+            // 3. Apply Ward 100 Filter
+            if (selectedWardId === "XX") {
+                filteredData = filteredData.filter(row => String(row['Ward']) !== "100");
+            }
+
+            if (filteredData.length === 0) {
+                updateTimestampDisplay(0);
+                document.getElementById('tableHead').innerHTML = '';
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="100%" style="text-align:center; padding: 20px;">ไม่พบข้อมูล</td></tr>';
+                if (printBtn) printBtn.disabled = true;
+                if (printMiniBtn) printMiniBtn.disabled = true;
+                if (printMini2Btn) printMini2Btn.disabled = true;
+                if (printLabelBtn) printLabelBtn.disabled = true;
+                return;
+            }
+
+            updateTimestampDisplay(filteredData.length);
+
+            const processedData = filteredData.map(row => {
+                const newRow = {};
+
+                const y = row['Age (years)'] || 0;
+                const m = row['Age (months)'] || 0;
+                const d = row['Age (days)'] || 0;
+                let ageStr = "";
+                if (y >= 6) ageStr = `${y} ปี`;
+                else if (y > 0 && y < 6) ageStr = `${y} ปี${m > 0 ? ` ${m} เดือน` : ''}`;
+                else if (y <= 0 && m >= 1) ageStr = `${m} เดือน${d > 0 ? ` ${d} วัน` : ''}`;
+                else if (y <= 0 && m === 0) ageStr = `${d} วัน`;
+
+                const sys = row['systolic BP'];
+                const dia = row['diastolic BP'];
+                const bp = (sys && dia) ? `${sys}/${dia}` : null;
+
+                const weight = row['น้ำหนัก'];
+                const height = row['ส่วนสูง'];
+                const bmi = (weight && height) ? (weight / Math.pow(height / 100, 2)).toFixed(2) : null;
+
+                const cr = row['Creatinine Result'];
+                const sex = row['sex'];
+                let egfr = null, ckd = null;
+
+                if (weight && sex && cr && y >= 18) {
+                    egfr = ((140 - y) * weight) / (72 * parseFloat(cr));
+                    if (String(sex) === "2") egfr *= 0.85;
+
+                    if (egfr >= 90) ckd = "1";
+                    else if (egfr >= 60) ckd = "2";
+                    else if (egfr >= 30) ckd = "3";
+                    else if (egfr >= 15) ckd = "4";
+                    else ckd = "5";
+
+                    egfr = egfr.toFixed(2);
+                }
+
+                const excludeKeys = [
+                    'ชื่อ', 'สกุล', 'Age (years)', 'Age (months)', 'Age (days)',
+                    'systolic BP', 'diastolic BP', 'sex',
+                    'religion_code', 'type_code', 'items_id'
+                ];
+                if (selectedWardId !== "XX") {
+                    excludeKeys.push('Ward');
+                }
+
+                for (let key in row) {
+                    if (excludeKeys.includes(key)) continue;
+
+                    if (key === 'HN') {
+                        newRow['HN'] = row['HN'];
+                        newRow['ชื่อ-สกุล'] = `${row['ชื่อ']} ${row['สกุล']}`;
+                    } else if (key === 'Ward') {
+                        const w = allWards.find(w => w.ward === String(row['Ward']));
+                        newRow['Ward'] = w ? w.shortname : row['Ward'];
+                    } else if (key === 'เตียง') {
+                        newRow['เตียง'] = row['เตียง'];
+                        newRow['อายุ'] = ageStr;
+                    } else if (key === 'ศาสนา') {
+                        newRow['ศาสนา'] = row['ศาสนา'];
+                        newRow['BP'] = bp;
+                    } else if (key === 'ส่วนสูง') {
+                        newRow['ส่วนสูง'] = height;
+                        newRow['BMI'] = bmi;
+                    } else if (key.endsWith(' Date') || key.endsWith(' Result')) {
+                        const labName = key.replace(/ Date| Result/, '');
+                        if (!newRow[labName]) {
+                            newRow[labName] = {
+                                result: row[`${labName} Result`],
+                                date: row[`${labName} Date`]
+                            };
+                        }
+                        if (key === 'Creatinine Result') {
+                            newRow['eGFR'] = egfr;
+                            newRow['CKD Stage'] = ckd;
+                        }
+                    } else {
+                        newRow[key] = row[key];
+                    }
+                }
+                return newRow;
+            });
+
+            renderHTMLTable(processedData, filteredData);
+
+            // Add this line to trigger the duplicate table generation
+            //findAndRenderDuplicates(raw);
+
+            if (printBtn) printBtn.disabled = false;
+            if (printMiniBtn) printMiniBtn.disabled = false;
+            if (printMini2Btn) printMini2Btn.disabled = false;
+            if (printLabelBtn) printLabelBtn.disabled = false;
+        }
+
+        function renderHTMLTable(data, rawData) {
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            const columns = Object.keys(data[0]);
+
+            const trHead = document.createElement('tr');
+            columns.forEach((col, index) => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                if (index === 0) th.classList.add('freeze-1');
+                if (index === 1) th.classList.add('freeze-2');
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+
+            data.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+
+                const rawWardCode = rawData[rowIndex]['Ward'] || 'N/A';
+                tr.setAttribute('data-ward', rawWardCode);
+
+                columns.forEach((col, index) => {
+                    const td = document.createElement('td');
+                    if (index === 0) td.classList.add('freeze-1');
+                    if (index === 1) td.classList.add('freeze-2');
+
+                    const val = row[col];
+
+                    if (col === 'HN') {
+                        const btn = document.createElement('button');
+                        btn.className = 'hn-btn';
+                        btn.textContent = (val !== null && val !== undefined) ? val : '-';
+                        btn.addEventListener('click', () => {
+                            // Call the label print function with just this specific row's raw data
+                            openLabelPrintWindow([rawData[rowIndex]]);
+                        });
+                        td.appendChild(btn);
+                    } else if (typeof val === 'object' && val !== null && 'result' in val) {
+                        const resText = (val.result !== null && val.result !== undefined) ? val.result : '-';
+                        const dateText = val.date ? formatThaiDate(val.date) : '';
+                        td.innerHTML = `${resText} <span class="lab-date">${dateText}</span>`;
+                    } else {
+                        td.textContent = (val !== null && val !== undefined) ? val : '-';
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- Standard Document Print Logic ---
+        const printBtn = document.getElementById('printBtn');
+        const printMiniBtn = document.getElementById('printMiniBtn');
+        const printMini2Btn = document.getElementById('printMini2Btn');
+        const printLabelBtn = document.getElementById('printLabelBtn');
+
+        function handlePrint(printType = 'full') {
+            const isMini = (printType === 'mini' || printType === 'mini2');
+            const originalTable = document.getElementById('foodTable');
+            const allRows = Array.from(originalTable.querySelectorAll('tbody tr'));
+
+            if (allRows.length === 0) return;
+
+            const mealSelect = document.getElementById('mealSelect');
+            const mealName = mealSelect.options[mealSelect.selectedIndex]?.text || 'N/A';
+
+            const dateObj = lastFetchDateObj || new Date();
+            const currentDate = dateObj.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+            const fileSafeTime = dateObj.toLocaleString('th-TH', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }).replace(/[\s/:]/g, '_');
+
+            // --- ALL print options now correctly group by Ward! ---
+            const wardGroups = {};
+            allRows.forEach(tr => {
+                const wardCode = tr.getAttribute('data-ward');
+                if (!wardGroups[wardCode]) wardGroups[wardCode] = [];
+                wardGroups[wardCode].push(tr);
+            });
+
+            const baseHeaderCells = Array.from(originalTable.querySelectorAll('thead tr th'));
+            let columnsToKeep = [];
+            const miniColumns = ["HN", "ชื่อ-สกุล", "เตียง", "อายุ", "ศาสนา", "Item", "Type", "จำนวน", "comment"];
+
+            baseHeaderCells.forEach((th, index) => {
+                const colName = th.textContent.trim();
+                if (colName === "Ward") return;
+                if (isMini && !miniColumns.includes(colName)) return;
+                columnsToKeep.push({ index: index, text: colName });
+            });
+
+            let printHTML = '';
+            const wardCodes = Object.keys(wardGroups);
+
+            wardCodes.forEach((wardCode, i) => {
+                // Get the accurate Ward name for the repeating header
+                const wObj = allWards.find(w => w.ward === wardCode);
+                const printWardName = wObj ? wObj.name : wardCode;
+
+                // Add bottom margin to separate the stacked tables gracefully in Mini 2 layout
+                let tableHtml = '<table style="margin-bottom: 30px;"><thead>';
+
+                tableHtml += `
+                    <tr class="print-header-row">
+                        <th colspan="${columnsToKeep.length}">
+                            <!--
+                            <div style="text-align: center; font-size: 18px; margin-bottom: 12px; font-weight: bold;">
+                                รายการอาหารผู้ป่วย โรงพยาบาลตรัง ${isMini ? '(แบบย่อ)' : ''}
+                            </div>
+                            -->
+                            <div style="display: flex; justify-content: space-between; font-size: 14x; font-weight: normal; margin-bottom: 4px;">
+                                <span><b>วอร์ด (Ward):</b> ${printWardName}</span>
+                                <span><b>มื้ออาหาร (Meal):</b> ${mealName}</span>
+                                <span><b>วันที่ (Date):</b> ${currentDate}</span>
+                            </div>
+                        </th>
+                    </tr>
+                    <tr>
+                `;
+
+                columnsToKeep.forEach(col => {
+                    // tableHtml += `<th>${col.text}</th>`;
+                    const widthStyle = col.text === 'comment' ? ' style="width: 16%;"' : '';
+                    tableHtml += `<th${widthStyle}>${col.text}</th>`;
+                });
+                tableHtml += '</tr></thead><tbody>';
+
+                wardGroups[wardCode].forEach(tr => {
+                    tableHtml += '<tr>';
+                    const cells = Array.from(tr.children);
+                    columnsToKeep.forEach(col => {
+                        const widthStyle = col.text === 'comment' ? ' style="width: 16%;"' : '';
+                        let cellContent = cells[col.index].innerHTML;
+
+                        // If the column is HN, strip the button HTML and just take the text
+                        if (col.text === 'HN') {
+                            cellContent = cells[col.index].textContent;
+                        }
+
+                        tableHtml += `<td${widthStyle}>${cellContent}</td>`;
+                    });
+                    tableHtml += '</tr>';
+                });
+
+                tableHtml += '</tbody></table>';
+                printHTML += tableHtml;
+
+                // ONLY break page if it is NOT "mini2" and NOT the last table
+                if (printType !== 'mini2' && i < wardCodes.length - 1) {
+                    printHTML += '<div style="page-break-after: always;"></div>';
+                }
+            });
+
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) { alert("Please allow pop-ups in your browser to print the document."); return; }
+
+            // const pageOrientation = isMini ? 'portrait' : 'landscape';
+            const pageOrientation = 'landscape';
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="th">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>ข้อมูล_ณ_เวลา_${fileSafeTime}</title>
+                    <style>
+                        @page { size: A4 ${pageOrientation}; margin: 10mm; }
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000; background: #fff; margin: 0; padding: 0; }
+                        <!-- table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: auto; } -->
+                        table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto; }
+                        th, td { border: 1px solid #333 !important; padding: 6px; text-align: left; word-break: break-word; }
+                        
+                        /* The secret sauce: repeats the header on overflow */
+                        thead { display: table-header-group; }
+                        
+                        tr { page-break-inside: avoid; }
+                        .print-header-row th { border: none !important; border-bottom: 2px solid #000 !important; background-color: #fff !important; padding-top: 10px; padding-bottom: 10px; }
+                        thead tr:nth-child(2) th { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        .lab-date { color: #555; font-size: 10px; display: block; margin-top: 2px; }
+                    </style>
+                </head>
+                <body>
+                    ${printHTML}
+                </body>
+                </html>
+            `);
+
+            printWindow.document.close();
+            printWindow.focus();
+
+            setTimeout(() => {
+                printWindow.onafterprint = function () { printWindow.close(); };
+                printWindow.print();
+            }, 800);
+        }
+
+        // --- Thermal Label Print Logic ---
+        // Reusable function to print labels for any given array of data
+        function openLabelPrintWindow(dataArray) {
+            if (!dataArray || dataArray.length === 0) return;
+
+            const mealSelect = document.getElementById('mealSelect');
+            const mealName = mealSelect.options[mealSelect.selectedIndex]?.text || '';
+
+            const dateObj = lastFetchDateObj || new Date();
+            const day = dateObj.getDate();
+            const shortMonth = dateObj.toLocaleDateString('th-TH', { month: 'short' });
+            const yearTh = dateObj.toLocaleDateString('th-TH', { year: 'numeric' });
+            const labelDateStr = `${day} ${shortMonth} ${yearTh}`;
+
+            const fileSafeTime = dateObj.toLocaleString('th-TH', {
+                year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }).replace(/[\s/:]/g, '_');
+
+            let labelsHTML = '';
+
+            dataArray.forEach(row => {
+                const y = row['Age (years)'] || 0;
+                const m = row['Age (months)'] || 0;
+                const d = row['Age (days)'] || 0;
+                let ageStr = "";
+                if (y >= 6) ageStr = `${y} ปี`;
+                else if (y > 0 && y < 6) ageStr = `${y} ปี${m > 0 ? ` ${m} เดือน` : ''}`;
+                else if (y <= 0 && m >= 1) ageStr = `${m} เดือน${d > 0 ? ` ${d} วัน` : ''}`;
+                else if (y <= 0 && m === 0) ageStr = `${d} วัน`;
+
+                const wObj = allWards.find(w => w.ward === String(row['Ward']));
+                const wardStr = wObj ? wObj.shortname : (row['Ward'] || '');
+
+                const hn = row['HN'] || '-';
+                const bed = row['เตียง'] || '-';
+                const name = `${row['ชื่อ'] || ''} ${row['สกุล'] || ''}`.trim();
+                const religion = row['ศาสนา'] || '-';
+                const type = row['Type'] || '';
+                const item = row['Item'] || '';
+                const comment = row['comment'] || '';
+
+                labelsHTML += `
+                    <div class="label-box">
+                        <div class="line"><strong>${labelDateStr} มื้อ ${mealName}</strong></div>
+                        <div class="line"><strong>${wardStr}</strong></div>
+                        <div class="line">HN ${hn} <strong>เตียง ${bed}</strong></div>
+                        <div class="line"><strong>${name}</strong></div>
+                        <div class="line">อายุ ${ageStr} ศาสนา ${religion}</div>
+                        <div class="line">${type}</div>
+                        <div class="line">${item}</div>
+                        ${comment ? `<div class="line">${comment}</div>` : ''}
+                    </div>
+                `;
+            });
+
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) { alert("Please allow pop-ups."); return; }
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="th">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>สติ๊กเกอร์อาหาร_${fileSafeTime}</title>
+                    <style>
+                        @page { size: landscape; margin: 2mm; }
+                        body { 
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                            margin: 0; 
+                            padding: 0; 
+                            color: #000;
+                            background: #fff;
+                        }
+                        .label-box {
+                            width: 55mm; 
+                            margin: 0 auto;
+                            padding: 10px 0;
+                            box-sizing: border-box;
+                            page-break-inside: avoid;
+                            font-size: 13px;
+                            line-height: 1.5;
+                        }
+                        .label-box:last-child {
+                            border-bottom: none;
+                        }
+                        .line {
+                            word-wrap: break-word;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${labelsHTML}
+                </body>
+                </html>
+            `);
+
+            printWindow.document.close();
+            printWindow.focus();
+
+            setTimeout(() => {
+                printWindow.onafterprint = function () { printWindow.close(); };
+                printWindow.print();
+            }, 800);
+        }
+
+        // The handler for the main "Print Label" button (handles filters)
+        function handlePrintLabel() {
+            if (!currentRawData || currentRawData.length === 0) return;
+
+            let filteredData = currentRawData;
+
+            if (allNutritionTypes.length > 0) {
+                filteredData = currentRawData.filter(row => selectedTypeCodes.has(String(row['type_code'])));
+            }
+
+            filteredData = filteredData.filter(row => {
+                const isHalal = String(row['religion_code']) === "03";
+                if (isHalal && showReligionHalal) return true;
+                if (!isHalal && showReligionNormal) return true;
+                return false;
+            });
+
+            if (selectedWardId === "XX") {
+                filteredData = filteredData.filter(row => String(row['Ward']) !== "100");
+            }
+            if (filteredData.length === 0) return;
+
+            openLabelPrintWindow(filteredData);
+        }
+
+        function findAndRenderDuplicates(rawData) {
+
+            const dupContainer = document.getElementById('duplicateContainer');
+            const dupTitle = document.getElementById('duplicateTitle');
+            const thead = document.getElementById('dupTableHead');
+            const tbody = document.getElementById('dupTableBody');
+            const dpDisplay = document.getElementById('duplicateDisplay');
+
+            if (rawData.length === 0) {
+                dupContainer.style.display = 'none';
+                dupTitle.style.display = 'none';
+                dpDisplay.style.display = 'none';
+                return;
+            }
+
+            // 1. Count occurrences of each HN using RAW DATA (ignoring UI filters)
+            const hnCounts = {};
+            rawData.forEach(row => {
+                if (row['HN']) {
+                    hnCounts[row['HN']] = (hnCounts[row['HN']] || 0) + 1;
+                }
+            });
+
+            // 2. Filter out rows where HN count is greater than 1
+            const duplicatesRaw = rawData.filter(row => hnCounts[row['HN']] > 1);
+
+            // 3. Hide table if no duplicates found in the raw data
+            if (duplicatesRaw.length === 0) {
+                dupContainer.style.display = 'none';
+                dupTitle.style.display = 'none';
+                dpDisplay.style.display = 'none';
+                return;
+            }
+
+            // 4. Format the raw data into nice display strings
+            let duplicates = duplicatesRaw.map(row => {
+                // Format Age
+                const y = row['Age (years)'] || 0;
+                const m = row['Age (months)'] || 0;
+                const d = row['Age (days)'] || 0;
+                let ageStr = "";
+                if (y >= 6) ageStr = `${y} ปี`;
+                else if (y > 0 && y < 6) ageStr = `${y} ปี${m > 0 ? ` ${m} เดือน` : ''}`;
+                else if (y <= 0 && m >= 1) ageStr = `${m} เดือน${d > 0 ? ` ${d} วัน` : ''}`;
+                else if (y <= 0 && m === 0) ageStr = `${d} วัน`;
+
+                // Format Ward Name
+                const w = allWards.find(w => w.ward === String(row['Ward']));
+                const wardStr = w ? w.shortname : (row['Ward'] || '-');
+
+                // Return clean object
+                return {
+                    'HN': row['HN'] || '-',
+                    'ชื่อ-สกุล': `${row['ชื่อ'] || ''} ${row['สกุล'] || ''}`.trim() || '-',
+                    'Ward': wardStr,
+                    'เตียง': row['เตียง'] || '-',
+                    'อายุ': ageStr || '-',
+                    'ศาสนา': row['ศาสนา'] || '-',
+                    'Type': row['Type'] || '-',
+                    'Item': row['Item'] || '-',
+                    'จำนวน': row['จำนวน'] || '-',
+                    'comment': row['comment'] || '-'
+                };
+            });
+
+            // 5. Sort the formatted duplicates array by HN
+            duplicates.sort((a, b) => {
+                const hnA = String(a['HN'] || '');
+                const hnB = String(b['HN'] || '');
+                return hnA.localeCompare(hnB, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+            // 6. Show the container and warning message
+            dupContainer.style.display = 'block';
+            dupTitle.style.display = 'block';
+            dpDisplay.style.display = 'block';
+
+            if (!dpDisplay.innerHTML.includes('พบการสั่งอาหารซ้ำ')) {
+                dpDisplay.innerHTML = `<span style="float: left; color: #dc2626; font-size: 16px;">⚠️ พบการสั่งอาหารซ้ำ <a style="color: #3b82f6; font-size: 16px;" href="#duplicateTable">Click เพื่อดู</a></span>`;
+            }
+
+            // 7. Render Header
+            const colsToDisplay = ['HN', 'ชื่อ-สกุล', 'Ward', 'เตียง', 'อายุ', 'ศาสนา', 'Type', 'Item', 'จำนวน', 'comment'];
+            thead.innerHTML = '';
+            const trHead = document.createElement('tr');
+            colsToDisplay.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                th.style.backgroundColor = '#fee2e2';
+                th.style.color = '#991b1b';
+                th.style.borderBottom = '2px solid #f87171';
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+
+            // 8. Render Body
+            tbody.innerHTML = '';
+            duplicates.forEach(row => {
+                const tr = document.createElement('tr');
+                colsToDisplay.forEach(col => {
+                    const td = document.createElement('td');
+                    td.textContent = (row[col] !== null && row[col] !== undefined && row[col] !== '') ? row[col] : '-';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        printBtn.addEventListener('click', () => handlePrint('full'));
+        printMiniBtn.addEventListener('click', () => handlePrint('mini'));
+        printMini2Btn.addEventListener('click', () => handlePrint('mini2'));
+        printLabelBtn.addEventListener('click', handlePrintLabel);
+
+    </script>
+</body>
+
+</html>
