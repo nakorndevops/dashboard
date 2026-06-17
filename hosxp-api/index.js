@@ -679,7 +679,7 @@ app.post("/food", verifyAPIkey, async (request, response) => {
       INNER JOIN food_date ON food_date.date_id = ipt_food_menu.date_id
       INNER JOIN patient ON ipt.hn = patient.hn
       INNER JOIN religion ON religion.religion = patient.religion
-      INNER JOIN opdscreen ON opdscreen.vn = ipt.vn
+      LEFT JOIN opdscreen ON opdscreen.vn = ipt.vn
     WHERE
       ipt_food_menu.date_id = WEEKDAY(CURDATE()) + 1
       AND ipt.dchdate IS NULL

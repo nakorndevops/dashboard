@@ -540,7 +540,6 @@
         let lastFetchDateObj = null;
         let lastFetchTimeMs = 0;
         let currentRawData = [];
-        //let raw = [];
 
         // Religion Filter State
         let showReligionNormal = true;
@@ -900,6 +899,7 @@
                     } else if (key === 'เตียง') {
                         newRow['เตียง'] = row['เตียง'];
                         newRow['อายุ'] = ageStr;
+                        newRow['เพศ'] = String(sex) === "1" ? "ชาย" : (String(sex) === "2" ? "หญิง" : "-");
                     } else if (key === 'ศาสนา') {
                         newRow['ศาสนา'] = row['ศาสนา'];
                         newRow['BP'] = bp;
@@ -926,9 +926,6 @@
             });
 
             renderHTMLTable(processedData, filteredData);
-
-            // Add this line to trigger the duplicate table generation
-            //findAndRenderDuplicates(raw);
 
             if (printBtn) printBtn.disabled = false;
             if (printMiniBtn) printMiniBtn.disabled = false;
@@ -996,7 +993,7 @@
         const printMini2Btn = document.getElementById('printMini2Btn');
         const printLabelBtn = document.getElementById('printLabelBtn');
 
-        function handlePrint(printType = 'full') {
+function handlePrint(printType = 'full') {
             const isMini = (printType === 'mini' || printType === 'mini2');
             const originalTable = document.getElementById('foodTable');
             const allRows = Array.from(originalTable.querySelectorAll('tbody tr'));
@@ -1013,7 +1010,6 @@
                 hour: '2-digit', minute: '2-digit', second: '2-digit'
             }).replace(/[\s/:]/g, '_');
 
-            // --- ALL print options now correctly group by Ward! ---
             const wardGroups = {};
             allRows.forEach(tr => {
                 const wardCode = tr.getAttribute('data-ward');
@@ -1023,7 +1019,9 @@
 
             const baseHeaderCells = Array.from(originalTable.querySelectorAll('thead tr th'));
             let columnsToKeep = [];
-            const miniColumns = ["HN", "ชื่อ-สกุล", "เตียง", "อายุ", "ศาสนา", "Item", "Type", "จำนวน", "comment"];
+            
+            // ลำดับคอลัมน์สำหรับการพิมพ์แบบย่อ
+            const miniColumns = ["HN", "ชื่อ-สกุล", "เตียง", "อายุ", "เพศ", "ศาสนา", "Item", "Type", "จำนวน", "comment"];
 
             baseHeaderCells.forEach((th, index) => {
                 const colName = th.textContent.trim();
@@ -1036,22 +1034,17 @@
             const wardCodes = Object.keys(wardGroups);
 
             wardCodes.forEach((wardCode, i) => {
-                // Get the accurate Ward name for the repeating header
                 const wObj = allWards.find(w => w.ward === wardCode);
                 const printWardName = wObj ? wObj.name : wardCode;
 
-                // Add bottom margin to separate the stacked tables gracefully in Mini 2 layout
-                let tableHtml = '<table style="margin-bottom: 30px;"><thead>';
-
+                // --- FIX: ใส่ margin-bottom เฉพาะตอนพิมพ์แบบ mini2 (ลดกระดาษ) ---
+                const marginBottom = printType === 'mini2' ? '30px' : '0px';
+                let tableHtml = `<table style="margin-bottom: ${marginBottom};"><thead>`;
+                
                 tableHtml += `
                     <tr class="print-header-row">
                         <th colspan="${columnsToKeep.length}">
-                            <!--
-                            <div style="text-align: center; font-size: 18px; margin-bottom: 12px; font-weight: bold;">
-                                รายการอาหารผู้ป่วย โรงพยาบาลตรัง ${isMini ? '(แบบย่อ)' : ''}
-                            </div>
-                            -->
-                            <div style="display: flex; justify-content: space-between; font-size: 14x; font-weight: normal; margin-bottom: 4px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: normal; margin-bottom: 4px;">
                                 <span><b>วอร์ด (Ward):</b> ${printWardName}</span>
                                 <span><b>มื้ออาหาร (Meal):</b> ${mealName}</span>
                                 <span><b>วันที่ (Date):</b> ${currentDate}</span>
@@ -1062,8 +1055,12 @@
                 `;
 
                 columnsToKeep.forEach(col => {
-                    // tableHtml += `<th>${col.text}</th>`;
-                    const widthStyle = col.text === 'comment' ? ' style="width: 16%;"' : '';
+                    let widthStyle = '';
+                    if (col.text === 'comment') {
+                        widthStyle = ' style="width: 16%;"';
+                    } else if (col.text === 'Item') {
+                        widthStyle = ' style="width: 16%; max-width: 16%;"'; 
+                    }
                     tableHtml += `<th${widthStyle}>${col.text}</th>`;
                 });
                 tableHtml += '</tr></thead><tbody>';
@@ -1071,11 +1068,17 @@
                 wardGroups[wardCode].forEach(tr => {
                     tableHtml += '<tr>';
                     const cells = Array.from(tr.children);
+                    
                     columnsToKeep.forEach(col => {
-                        const widthStyle = col.text === 'comment' ? ' style="width: 16%;"' : '';
+                        let widthStyle = '';
+                        if (col.text === 'comment') {
+                            widthStyle = ' style="width: 16%;"';
+                        } else if (col.text === 'Item') {
+                            widthStyle = ' style="width: 16%; max-width: 16%;"';
+                        }
+                        
                         let cellContent = cells[col.index].innerHTML;
 
-                        // If the column is HN, strip the button HTML and just take the text
                         if (col.text === 'HN') {
                             cellContent = cells[col.index].textContent;
                         }
@@ -1088,16 +1091,15 @@
                 tableHtml += '</tbody></table>';
                 printHTML += tableHtml;
 
-                // ONLY break page if it is NOT "mini2" and NOT the last table
+                // --- FIX: ปรับ CSS Inline ของ div ตัวตัดหน้าให้ไม่มีความสูงและขอบเขต ป้องกัน Chrome นำไปขึ้นหน้าใหม่ ---
                 if (printType !== 'mini2' && i < wardCodes.length - 1) {
-                    printHTML += '<div style="page-break-after: always;"></div>';
+                    printHTML += '<div style="break-after: page; page-break-after: always; height: 0; margin: 0; padding: 0; border: none; clear: both;"></div>';
                 }
             });
 
             const printWindow = window.open('', '_blank');
             if (!printWindow) { alert("Please allow pop-ups in your browser to print the document."); return; }
 
-            // const pageOrientation = isMini ? 'portrait' : 'landscape';
             const pageOrientation = 'landscape';
 
             printWindow.document.write(`
@@ -1109,13 +1111,9 @@
                     <style>
                         @page { size: A4 ${pageOrientation}; margin: 10mm; }
                         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000; background: #fff; margin: 0; padding: 0; }
-                        <!-- table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: auto; } -->
                         table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: auto; }
                         th, td { border: 1px solid #333 !important; padding: 6px; text-align: left; word-break: break-word; }
-                        
-                        /* The secret sauce: repeats the header on overflow */
                         thead { display: table-header-group; }
-                        
                         tr { page-break-inside: avoid; }
                         .print-header-row th { border: none !important; border-bottom: 2px solid #000 !important; background-color: #fff !important; padding-top: 10px; padding-bottom: 10px; }
                         thead tr:nth-child(2) th { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1178,13 +1176,17 @@
                 const item = row['Item'] || '';
                 const comment = row['comment'] || '';
 
+                // --- เพิ่มแปลงค่าเพศ ---
+                const sexCode = String(row['sex']);
+                const sexStr = sexCode === "1" ? "ชาย" : (sexCode === "2" ? "หญิง" : "-");
+
                 labelsHTML += `
                     <div class="label-box">
                         <div class="line"><strong>${labelDateStr} มื้อ ${mealName}</strong></div>
                         <div class="line"><strong>${wardStr}</strong></div>
                         <div class="line">HN ${hn} <strong>เตียง ${bed}</strong></div>
                         <div class="line"><strong>${name}</strong></div>
-                        <div class="line">อายุ ${ageStr} ศาสนา ${religion}</div>
+                        <div class="line">อายุ ${ageStr} ${sexStr} ${religion}</div>
                         <div class="line">${type}</div>
                         <div class="line">${item}</div>
                         ${comment ? `<div class="line">${comment}</div>` : ''}
@@ -1268,7 +1270,6 @@
         }
 
         function findAndRenderDuplicates(rawData) {
-
             const dupContainer = document.getElementById('duplicateContainer');
             const dupTitle = document.getElementById('duplicateTitle');
             const thead = document.getElementById('dupTableHead');
@@ -1282,7 +1283,6 @@
                 return;
             }
 
-            // 1. Count occurrences of each HN using RAW DATA (ignoring UI filters)
             const hnCounts = {};
             rawData.forEach(row => {
                 if (row['HN']) {
@@ -1290,10 +1290,8 @@
                 }
             });
 
-            // 2. Filter out rows where HN count is greater than 1
             const duplicatesRaw = rawData.filter(row => hnCounts[row['HN']] > 1);
 
-            // 3. Hide table if no duplicates found in the raw data
             if (duplicatesRaw.length === 0) {
                 dupContainer.style.display = 'none';
                 dupTitle.style.display = 'none';
@@ -1301,9 +1299,7 @@
                 return;
             }
 
-            // 4. Format the raw data into nice display strings
             let duplicates = duplicatesRaw.map(row => {
-                // Format Age
                 const y = row['Age (years)'] || 0;
                 const m = row['Age (months)'] || 0;
                 const d = row['Age (days)'] || 0;
@@ -1313,14 +1309,17 @@
                 else if (y <= 0 && m >= 1) ageStr = `${m} เดือน${d > 0 ? ` ${d} วัน` : ''}`;
                 else if (y <= 0 && m === 0) ageStr = `${d} วัน`;
 
-                // Format Ward Name
                 const w = allWards.find(w => w.ward === String(row['Ward']));
                 const wardStr = w ? w.shortname : (row['Ward'] || '-');
 
-                // Return clean object
+                // --- เช็คเพศ ---
+                const sexCode = String(row['sex']);
+                const sexStr = sexCode === "1" ? "ชาย" : (sexCode === "2" ? "หญิง" : "-");
+
                 return {
                     'HN': row['HN'] || '-',
                     'ชื่อ-สกุล': `${row['ชื่อ'] || ''} ${row['สกุล'] || ''}`.trim() || '-',
+                    'เพศ': sexStr, // --- ส่งเข้า object ---
                     'Ward': wardStr,
                     'เตียง': row['เตียง'] || '-',
                     'อายุ': ageStr || '-',
@@ -1332,14 +1331,12 @@
                 };
             });
 
-            // 5. Sort the formatted duplicates array by HN
             duplicates.sort((a, b) => {
                 const hnA = String(a['HN'] || '');
                 const hnB = String(b['HN'] || '');
                 return hnA.localeCompare(hnB, undefined, { numeric: true, sensitivity: 'base' });
             });
 
-            // 6. Show the container and warning message
             dupContainer.style.display = 'block';
             dupTitle.style.display = 'block';
             dpDisplay.style.display = 'block';
@@ -1348,8 +1345,8 @@
                 dpDisplay.innerHTML = `<span style="float: left; color: #dc2626; font-size: 16px;">⚠️ พบการสั่งอาหารซ้ำ <a style="color: #3b82f6; font-size: 16px;" href="#duplicateTable">Click เพื่อดู</a></span>`;
             }
 
-            // 7. Render Header
-            const colsToDisplay = ['HN', 'ชื่อ-สกุล', 'Ward', 'เตียง', 'อายุ', 'ศาสนา', 'Type', 'Item', 'จำนวน', 'comment'];
+            // --- เพิ่ม 'เพศ' เข้าไปใน Head ขิงตารางซ้ำ ---
+            const colsToDisplay = ['HN', 'ชื่อ-สกุล', 'Ward', 'เตียง', 'อายุ', 'เพศ', 'ศาสนา', 'Type', 'Item', 'จำนวน', 'comment'];
             thead.innerHTML = '';
             const trHead = document.createElement('tr');
             colsToDisplay.forEach(col => {
@@ -1362,7 +1359,6 @@
             });
             thead.appendChild(trHead);
 
-            // 8. Render Body
             tbody.innerHTML = '';
             duplicates.forEach(row => {
                 const tr = document.createElement('tr');
