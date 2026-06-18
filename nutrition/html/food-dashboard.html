@@ -993,7 +993,7 @@
         const printMini2Btn = document.getElementById('printMini2Btn');
         const printLabelBtn = document.getElementById('printLabelBtn');
 
-function handlePrint(printType = 'full') {
+        function handlePrint(printType = 'full') {
             const isMini = (printType === 'mini' || printType === 'mini2');
             const originalTable = document.getElementById('foodTable');
             const allRows = Array.from(originalTable.querySelectorAll('tbody tr'));
@@ -1019,7 +1019,7 @@ function handlePrint(printType = 'full') {
 
             const baseHeaderCells = Array.from(originalTable.querySelectorAll('thead tr th'));
             let columnsToKeep = [];
-            
+
             // ลำดับคอลัมน์สำหรับการพิมพ์แบบย่อ
             const miniColumns = ["HN", "ชื่อ-สกุล", "เตียง", "อายุ", "เพศ", "ศาสนา", "Item", "Type", "จำนวน", "comment"];
 
@@ -1040,7 +1040,7 @@ function handlePrint(printType = 'full') {
                 // --- FIX: ใส่ margin-bottom เฉพาะตอนพิมพ์แบบ mini2 (ลดกระดาษ) ---
                 const marginBottom = printType === 'mini2' ? '30px' : '0px';
                 let tableHtml = `<table style="margin-bottom: ${marginBottom};"><thead>`;
-                
+
                 tableHtml += `
                     <tr class="print-header-row">
                         <th colspan="${columnsToKeep.length}">
@@ -1059,7 +1059,7 @@ function handlePrint(printType = 'full') {
                     if (col.text === 'comment') {
                         widthStyle = ' style="width: 16%;"';
                     } else if (col.text === 'Item') {
-                        widthStyle = ' style="width: 16%; max-width: 16%;"'; 
+                        widthStyle = ' style="width: 16%; max-width: 16%;"';
                     }
                     tableHtml += `<th${widthStyle}>${col.text}</th>`;
                 });
@@ -1068,7 +1068,7 @@ function handlePrint(printType = 'full') {
                 wardGroups[wardCode].forEach(tr => {
                     tableHtml += '<tr>';
                     const cells = Array.from(tr.children);
-                    
+
                     columnsToKeep.forEach(col => {
                         let widthStyle = '';
                         if (col.text === 'comment') {
@@ -1076,7 +1076,7 @@ function handlePrint(printType = 'full') {
                         } else if (col.text === 'Item') {
                             widthStyle = ' style="width: 16%; max-width: 16%;"';
                         }
-                        
+
                         let cellContent = cells[col.index].innerHTML;
 
                         if (col.text === 'HN') {

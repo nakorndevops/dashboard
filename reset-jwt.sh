@@ -1,10 +1,12 @@
 #!/bin/bash
 
+# ./reset-jwt.sh ~/project/key/api-key/private.pem ~/project/jwt
+
 # 1. STRICT MODE: Exit on error, undefined variables, and pipe failures
 set -euo pipefail
 
 # Configuration variables (readonly prevents accidental overwrites)
-readonly CONTAINER_LIST=("authorized-server" "login" "nutrition" "login")
+readonly JWT_LIST=("authorized-server" "login" "nutrition")
 
 # 2. INPUT VALIDATION: Ensure both arguments are provided
 if [ "$#" -ne 2 ]; then
@@ -12,7 +14,6 @@ if [ "$#" -ne 2 ]; then
     echo "Usage: $0 <path_to_private_key> <target_directory_path>"
     exit 1
 fi
-# ./reset-jwt.sh project/key/api-key/private.pem project/jwt
 
 PRIVATE_KEY="$1"
 TARGET_DIR="$2"
@@ -36,7 +37,7 @@ mkdir -p "$TARGET_DIR"
 
 echo "Generating JWT..."
 
-for cert in "${CONTAINER_LIST[@]}"; do
+for cert in "${JWT_LIST[@]}"; do
     
     DIR="$TARGET_DIR/$cert"
     OUTPUT_FILE="${DIR}/client-secret.jwt"

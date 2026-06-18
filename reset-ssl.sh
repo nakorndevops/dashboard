@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# ./reset-ssl.sh ~/project/ssl
+
 # 1. STRICT MODE: Exit on error, undefined variables, and pipe failures
 set -euo pipefail
 
@@ -13,7 +15,6 @@ if [ -z "${1:-}" ]; then
     echo "Usage: $0 <target_directory_path>"
     exit 1
 fi
-# ./reset-ssl.sh project/ssl
 
 TARGET_DIR="$1"
 
