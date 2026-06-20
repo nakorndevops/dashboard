@@ -1,0 +1,14 @@
+{
+  "name": "ingestion",
+  "version": "1.0.0",
+  "description": "Ingestion",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "redis": "^6.0.0",
+	  "mysql2": "^3.14.3"
+  }
+}

@@ -137,6 +137,20 @@ services:
       - ./key/api-key/public.pem:/usr/src/app/api-key/public.pem:ro
       - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js
 
+  # moph-alert
+  moph-alert:
+    <<: *node-service
+    build:
+      context: ./moph-alert
+      dockerfile: Dockerfile
+    container_name: moph-alert
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/moph-alert/moph-alert.crt:/usr/src/app/ssl/moph-alert.crt:ro
+      - ./ssl/moph-alert/moph-alert.key:/usr/src/app/ssl/moph-alert.key:ro
+      - ./key/api-key/public.pem:/usr/src/app/api-key/public.pem:ro
+      - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js 
+
   # Authorized Server
   authorized-server:
     <<: *node-service
@@ -169,6 +183,9 @@ services:
       - ./ssl/webhook/webhook.crt:/usr/src/app/ssl/webhook.crt:ro
       - ./ssl/webhook/webhook.key:/usr/src/app/ssl/webhook.key:ro
 
+# DATABASES 
+
+  # Redis
   redis-token:
     image: redis:alpine # Note: Updated from 8.8.0-alpine (which doesn't exist standardly yet) to alpine
     container_name: redis-token
@@ -176,17 +193,62 @@ services:
       sh -c "redis-server /usr/local/etc/redis/redis.conf --requirepass \$$(cat /run/secrets/redis-token)"
     volumes:
       - ./redis-token/redis.conf:/usr/local/etc/redis/redis.conf:ro
-      - redis-data:/data
+      - redis-token:/data
     secrets:
       - redis-token
     restart: unless-stopped
     networks:
-      - app-network   
+      - app-network  
+
+  # Redis
+  redis-subscribe:
+    image: redis:alpine # Note: Updated from 8.8.0-alpine (which doesn't exist standardly yet) to alpine
+    container_name: redis-subscribe
+    command: >
+      sh -c "redis-server /usr/local/etc/redis/redis.conf --requirepass \$$(cat /run/secrets/redis-subscribe)"
+    volumes:
+      - ./redis-subscribe/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis-subscribe:/data
+    secrets:
+      - redis-subscribe
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # MySQL
+  subscribe-db:
+    image: mysql:9
+    container_name: subscribe-db
+    restart: always
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 --password="$$(cat /run/secrets/subscribe-db-root-password)" --silent']
+      interval: 3s
+      retries: 5
+      start_period: 30s
+    secrets:
+      - subscribe-db-root-password
+      - subscribe-db-user-password
+    environment:
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/subscribe-db-root-password
+      - MYSQL_DATABASE=subscribe_db
+      - MYSQL_USER=nakorn
+      - MYSQL_PASSWORD_FILE=/run/secrets/subscribe-db-user-password
+      - TZ=Asia/Bangkok
+    volumes:
+      - ./subscribe-db/my.cnf:/etc/mysql/my.cnf
+      - ./subscribe-db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql-subscribe:/var/lib/mysql
+    networks:
+      - app-network
 
 # Volume
 volumes:
-  redis-data:
+  redis-token:
     driver: local
+  redis-subscribe:
+    driver: local    
+  mysql-subscribe:
+    name: mysql-subscribe
 
 # Network
 networks:
@@ -198,3 +260,9 @@ networks:
 secrets:
   redis-token:
     file: ./secrets/redis-token.password
+  redis-subscribe:
+    file: ./secrets/redis-subscribe.password
+  subscribe-db-root-password:
+    file: ./secrets/subscribe-db-root.password
+  subscribe-db-user-password:
+    file: ./secrets/subscribe-db-user.password
