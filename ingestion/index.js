@@ -1,104 +1,175 @@
-const mysql = require('mysql2/promise');
-const redis = require('redis');
+import mysql from 'mysql2/promise';
+import { createClient } from 'redis';
 
 // Configuration
-const POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-let lastProcessedVn = '20231025000000'; // Initial start timestamp/VN
+const POLLING_INTERVAL_MS = 300000; // 5 minutes
+
+let lastProcessedVn = vnYesterday() + '235959';
 
 const port = process.env.PORT || 3006;
-const mysql_host = process.env.MYSQL_HOST;
-const mysql_user = process.env.MYSQL_USER;
-const mysql_password = process.env.MYSQL_PASSWORD;
-const mysql_database = process.env.MYSQL_DATABASE;
-const char_set = process.env.CHAR_SET;
+
+const hosxpHost = process.env.HOSXP_HOST;
+const hosxpUser = process.env.HOSXP_USER;
+const hosxpPassword = process.env.HOSXP_PASSWORD;
+const hosxpDatabase = process.env.HOSXP_DATABASE;
+const hosxpCharSet = process.env.HOSXP_CHAR_SET; 
+
+const regDBHost = process.env.SUBSCRIBE_DB_HOST;
+const regDBUser = process.env.SUBSCRIBE_DB_USER;
+const regDBPassword = process.env.SUBSCRIBE_DB_PASSWORD;
+const regDBName = process.env.SUBSCRIBE_DB_NAME;
+
+const redisUrl = process.env.REDIS_URL;
+
+// 1. Connect to Redis (tempList)
+// Initialize Redis ONCE
+const redisClient = createClient({ url: redisUrl });
+redisClient.on('error', err => console.error('Redis Client Error', err));
+
+// 2. Connect to Hospital DB (ovst)
+// Create the connection pool. The pool-specific settings are the defaults
+const hosDb = mysql.createPool({
+    host: hosxpHost,
+    user: hosxpUser,
+    database: hosxpDatabase,
+    password: hosxpPassword,
+    charset: hosxpCharSet, 
+});
+
+// 3. Connect to Registration DB (registerList)
+// (Removed the 'await' here because createPool is synchronous)
+const regDb = mysql.createPool({
+    host: regDBHost,
+    user: regDBUser,
+    password: regDBPassword,
+    database: regDBName
+});
 
 async function startIngestion() {
+    let limitProcessedVN = vnTomorrow() + '000000'; 
+
     console.log("Starting Ingestion Service...");
 
-    // 1. Connect to Redis (tempList)
-    // Initialize and connect Redis ONCE
-    const redisClient = createClient({ url: redisUrl });
-    redisClient.on('error', err => console.error('Redis Client Error', err));
-    redisClient.connect().catch(console.error);
+    // Connect to Redis
+    await redisClient.connect();
 
-    // 2. Connect to Hospital DB (ovst)
-    // Create the connection pool. The pool-specific settings are the defaults
-    const hosDb = mysql.createPool({
-        host: mysql_host,
-        user: mysql_user,
-        database: mysql_database,
-        password: mysql_password,
-        waitForConnections: true,
-        connectionLimit: 10,
-        maxIdle: 10, // max idle connections, the default value is the same as `connectionLimit`
-        idleTimeout: 60000, // idle connections timeout, in milliseconds, the default value 60000
-        queueLimit: 0,
-        enableKeepAlive: true,
-        keepAliveInitialDelay: 0,
-        charset: char_set, // Set the character set here
-    });
-
-    // 3. Connect to Registration DB (registerList)
-    const regDb = await mysql.createPool({
-        host: process.env.SUBSCRIBE_DB_HOST,
-        user: process.env.SUBSCRIBE_DB_USER,
-        password: process.env.SUBSCRIBE_DB_PASSWORD,
-        database: process.env.SUBSCRIBE_DB_NAME
-    });
-
-    // 4. Polling Loop
-    setInterval(async () => {
+    // 4. The Polling Function
+    async function poll() {
         try {
-            console.log(`Polling HOS DB for new visits since VN: ${lastProcessedVn}...`);
+            console.log(`Polling HOS DB for new visits since VN: ${lastProcessedVn} to VN: ${limitProcessedVN}...`);
 
             // Fetch new visits
             const [newVisits] = await hosDb.query(
-                `SELECT hn, vn FROM ovst WHERE vn > ? ORDER BY vn ASC`,
-                [lastProcessedVn]
+                `SELECT hn, vn FROM ovst WHERE vn > ? AND vn < ? ORDER BY vn ASC`, 
+                [lastProcessedVn, limitProcessedVN]
             );
 
-            if (newVisits.length === 0) {
-                console.log("No new visits found.");
-                return;
-            }
+            if (newVisits.length > 0) {
+                // Extract HNs to check against registerList
+                const hnsToCheck = newVisits.map(v => v.hn);
 
-            // Extract HNs to check against registerList
-            const hnsToCheck = newVisits.map(v => v.hn);
+                // Check which of these HNs are registered for alerts
+                const [registeredPatients] = await regDb.query(
+                    `SELECT hn FROM registerList WHERE hn IN (?)`, 
+                    [hnsToCheck]
+                );
 
-            // Check which of these HNs are registered for alerts
-            const [registeredPatients] = await regDb.query(
-                `SELECT hn FROM registerList WHERE hn IN (?)`,
-                [hnsToCheck]
-            );
+                const registeredHNs = new Set(registeredPatients.map(p => p.hn));
 
-            const registeredHNs = new Set(registeredPatients.map(p => p.hn));
+                // Process matches and push to Redis tempList
+                for (const visit of newVisits) {
+                    if (registeredHNs.has(visit.hn)) {
+                        const redisKey = `active_visit:${visit.hn}`;
+                        
+                        // Store visit data as a Redis Hash
+                        await redisClient.hSet(redisKey, {
+                            vn: visit.vn,
+                            lab_status: 'pending',
+                            pharmacy_status: 'pending'
+                        });
 
-            // Process matches and push to Redis tempList
-            for (const visit of newVisits) {
-                if (registeredHNs.has(visit.hn)) {
-                    const redisKey = `active_visit:${visit.hn}`;
-
-                    // Store visit data as a Redis Hash
-                    await redisClient.hSet(redisKey, {
-                        vn: visit.vn,
-                        lab_status: 'pending',
-                        pharmacy_status: 'pending'
-                    });
-
-                    // Set TTL (Expire after 18 hours to auto-cleanup tomorrow)
-                    await redisClient.expire(redisKey, 18 * 60 * 60);
-
-                    console.log(`Added HN ${visit.hn} (VN: ${visit.vn}) to Redis tempList.`);
+                        // Set TTL (Expire after 18 hours to auto-cleanup tomorrow)
+                        await redisClient.expire(redisKey, 18 * 60 * 60);
+                        
+                        console.log(`Added HN ${visit.hn} (VN: ${visit.vn}) to Redis tempList.`);
+                    }
+                    
+                    // Update High-Water Mark
+                    lastProcessedVn = visit.vn; 
                 }
-
-                // Update High-Water Mark
-                lastProcessedVn = visit.vn;
+            } else {
+                console.log("No new visits found.");
             }
 
         } catch (error) {
             console.error("Error during ingestion cycle:", error);
+        } finally {
+            // Schedule the NEXT run only AFTER this run has completely finished (or errored out)
+            setTimeout(poll, POLLING_INTERVAL_MS);
         }
-    }, POLLING_INTERVAL_MS);
+    }
+
+    // Kick off the first polling cycle
+    poll();
 }
 
 startIngestion();
+
+function vnToday() {
+  const now = new Date();
+
+  // 1. Get the Buddhist Year (Gregorian Year + 543) and extract the last 2 digits
+  const buddhistYear = now.getFullYear() + 543;
+  const yy = String(buddhistYear).slice(-2);
+
+  // 2. Get the current month (getMonth is 0-indexed, so we add 1)
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+
+  // 3. Get the current date
+  const dd = String(now.getDate()).padStart(2, '0');
+
+  // Combine them all together
+  const twelveDigitNumber = `${yy}${mm}${dd}`;
+  
+  return twelveDigitNumber;
+}
+
+function vnYesterday() {
+  const now = new Date();
+  now.setDate(now.getDate() - 1);
+
+  // 1. Get the Buddhist Year (Gregorian Year + 543) and extract the last 2 digits
+  const buddhistYear = now.getFullYear() + 543;
+  const yy = String(buddhistYear).slice(-2);
+
+  // 2. Get the current month (getMonth is 0-indexed, so we add 1)
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+
+  // 3. Get the current date
+  const dd = String(now.getDate()).padStart(2, '0');
+
+  // Combine them all together
+  const twelveDigitNumber = `${yy}${mm}${dd}`;
+  
+  return twelveDigitNumber;
+}
+
+function vnTomorrow() {
+  const now = new Date();
+  now.setDate(now.getDate() + 1);
+
+  // 1. Get the Buddhist Year (Gregorian Year + 543) and extract the last 2 digits
+  const buddhistYear = now.getFullYear() + 543;
+  const yy = String(buddhistYear).slice(-2);
+
+  // 2. Get the current month (getMonth is 0-indexed, so we add 1)
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+
+  // 3. Get the current date
+  const dd = String(now.getDate()).padStart(2, '0');
+
+  // Combine them all together
+  const twelveDigitNumber = `${yy}${mm}${dd}`;
+  
+  return twelveDigitNumber;
+}

@@ -16,7 +16,6 @@ const redisClient = createClient({ url: redisUrl });
 redisClient.on('error', err => console.error('Redis Client Error', err));
 redisClient.connect().catch(console.error);
 
-
 // Read files (Adding 'utf8' ensures the keys are read as strings, which jwt.sign expects for RS256)
 // Key
 const refreshTokenPrivateKey = fs.readFileSync('./refresh-token/private.pem', 'utf8');

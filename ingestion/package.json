@@ -1,6 +1,7 @@
 {
   "name": "ingestion",
   "version": "1.0.0",
+  "type": "module",
   "description": "Ingestion",
   "main": "index.js",
   "scripts": {

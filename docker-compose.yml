@@ -64,7 +64,8 @@ services:
       dockerfile: Dockerfile
     container_name: login
     depends_on:
-      - redis-token
+      redis-token:
+        condition: service_healthy
     volumes:
       - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
       - ./ssl/login/login.crt:/usr/src/app/ssl/login.crt:ro
@@ -81,7 +82,8 @@ services:
       dockerfile: Dockerfile
     container_name: nutrition
     depends_on:
-      - redis-token
+      redis-token:
+        condition: service_healthy
     volumes:
       - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
       - ./ssl/nutrition/nutrition.crt:/usr/src/app/ssl/nutrition.crt:ro
@@ -98,7 +100,8 @@ services:
       dockerfile: Dockerfile
     container_name: logout
     depends_on:
-      - redis-token
+      redis-token:
+        condition: service_healthy
     volumes:
       - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
       - ./ssl/logout/logout.crt:/usr/src/app/ssl/logout.crt:ro
@@ -111,8 +114,11 @@ services:
       context: ./refresh-token-renewer
       dockerfile: Dockerfile
     container_name: refresh-token-renewer
+    #depends_on:
+    #  - redis-token
     depends_on:
-      - redis-token
+      redis-token:
+        condition: service_healthy
     volumes:
       - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
       - ./ssl/refresh-token-renewer/refresh-token-renewer.crt:/usr/src/app/ssl/refresh-token-renewer.crt:ro
@@ -159,7 +165,8 @@ services:
       dockerfile: Dockerfile
     container_name: authorized-server
     depends_on:
-      - redis-token
+      redis-token:
+        condition: service_healthy
     volumes:
       - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
       - ./ssl/authorized-server/authorized-server.crt:/usr/src/app/ssl/authorized-server.crt:ro
@@ -183,6 +190,21 @@ services:
       - ./ssl/webhook/webhook.crt:/usr/src/app/ssl/webhook.crt:ro
       - ./ssl/webhook/webhook.key:/usr/src/app/ssl/webhook.key:ro
 
+# Ingestion Service (Polls HOS DB -> Checks Registration -> Pushes to Redis)
+  ingestion:
+    <<: *node-service
+    build:
+      context: ./ingestion
+      dockerfile: Dockerfile
+    container_name: ingestion
+    depends_on:
+      redis-subscribe:
+        condition: service_healthy
+      subscribe-db:
+        condition: service_healthy
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+
 # DATABASES 
 
   # Redis
@@ -191,6 +213,12 @@ services:
     container_name: redis-token
     command: >
       sh -c "redis-server /usr/local/etc/redis/redis.conf --requirepass \$$(cat /run/secrets/redis-token)"
+    healthcheck:
+          test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/redis-token)\" ping | grep PONG || exit 1"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+          start_period: 5s
     volumes:
       - ./redis-token/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - redis-token:/data
@@ -206,6 +234,12 @@ services:
     container_name: redis-subscribe
     command: >
       sh -c "redis-server /usr/local/etc/redis/redis.conf --requirepass \$$(cat /run/secrets/redis-subscribe)"
+    healthcheck:
+          test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/redis-subscribe)\" ping | grep PONG || exit 1"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+          start_period: 5s      
     volumes:
       - ./redis-subscribe/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - redis-subscribe:/data
