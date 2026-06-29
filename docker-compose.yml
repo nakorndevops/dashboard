@@ -106,6 +106,8 @@ services:
       - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
       - ./ssl/logout/logout.crt:/usr/src/app/ssl/logout.crt:ro
       - ./ssl/logout/logout.key:/usr/src/app/ssl/logout.key:ro
+    secrets:
+      - redis-token      
 
   # Refresh Token Renewer Service
   refresh-token-renewer:
@@ -114,8 +116,6 @@ services:
       context: ./refresh-token-renewer
       dockerfile: Dockerfile
     container_name: refresh-token-renewer
-    #depends_on:
-    #  - redis-token
     depends_on:
       redis-token:
         condition: service_healthy
@@ -128,6 +128,8 @@ services:
       - ./key/access-token/private.pem:/usr/src/app/access-token/private.pem:ro
       - ./key/api-key/public.pem:/usr/src/app/api-key/public.pem:ro
       - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js
+    secrets:
+      - redis-token
 
   # HOSxP API Server Service
   hosxp-api:
@@ -142,6 +144,8 @@ services:
       - ./ssl/hosxp-api/hosxp-api.key:/usr/src/app/ssl/hosxp-api.key:ro
       - ./key/api-key/public.pem:/usr/src/app/api-key/public.pem:ro
       - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js
+    secrets:
+      - hosxp-db-password
 
   # moph-alert
   moph-alert:
@@ -177,6 +181,8 @@ services:
       - ./jwt/authorized-server/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
       - ./module/tokenGenerator.js:/usr/src/app/module/tokenGenerator.js
       - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js
+    secrets:
+      - redis-token
 
 # --- New LINE Bot Service ---
   webhook:
@@ -204,6 +210,26 @@ services:
         condition: service_healthy
     volumes:
       - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+    secrets:
+      - redis-subscribe
+      - subscribe-db-password
+      - hosxp-db-password
+
+# Monitor-drug Service
+  monitor-drug:
+    <<: *node-service
+    build:
+      context: ./monitor-drug
+      dockerfile: Dockerfile
+    container_name: monitor-drug
+    depends_on:
+      redis-subscribe:
+        condition: service_healthy
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./jwt/monitor-drug/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
+    secrets:
+      - redis-subscribe
 
 # DATABASES 
 
@@ -255,18 +281,16 @@ services:
     container_name: subscribe-db
     restart: always
     healthcheck:
-      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 --password="$$(cat /run/secrets/subscribe-db-root-password)" --silent']
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -u nakorn --password="$$(cat /run/secrets/subscribe-db-password)" --silent']
       interval: 3s
       retries: 5
       start_period: 30s
     secrets:
-      - subscribe-db-root-password
-      - subscribe-db-user-password
+      - subscribe-db-password
     environment:
-      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/subscribe-db-root-password
       - MYSQL_DATABASE=subscribe_db
       - MYSQL_USER=nakorn
-      - MYSQL_PASSWORD_FILE=/run/secrets/subscribe-db-user-password
+      - MYSQL_PASSWORD_FILE=/run/secrets/subscribe-db-password
       - TZ=Asia/Bangkok
     volumes:
       - ./subscribe-db/my.cnf:/etc/mysql/my.cnf
@@ -296,7 +320,7 @@ secrets:
     file: ./secrets/redis-token.password
   redis-subscribe:
     file: ./secrets/redis-subscribe.password
-  subscribe-db-root-password:
-    file: ./secrets/subscribe-db-root.password
-  subscribe-db-user-password:
-    file: ./secrets/subscribe-db-user.password
+  subscribe-db-password:
+    file: ./secrets/subscribe-db.password
+  hosxp-db-password:
+    file: ./secrets/hosxp-db.password

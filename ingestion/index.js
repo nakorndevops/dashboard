@@ -1,175 +1,137 @@
+import * as fs from 'fs';
 import mysql from 'mysql2/promise';
 import { createClient } from 'redis';
 
-// Configuration
+// --- Configuration ---
 const POLLING_INTERVAL_MS = 300000; // 5 minutes
+let lastProcessedVn = '000000000000'; 
 
-let lastProcessedVn = vnYesterday() + '235959';
+// Helper function to read secrets securely
+function getSecret(filePath, secretName) {
+    try {
+        const secret = fs.readFileSync(filePath, 'utf8').trim();
+        if (!secret) throw new Error("File is empty");
+        console.log(`Successfully read ${secretName} from secret.`);
+        return secret;
+    } catch (err) {
+        console.error(`CRITICAL: Failed to read ${secretName}:`, err.message);
+        process.exit(1); 
+    }
+}
 
-const port = process.env.PORT || 3006;
+// Read Secrets
+const hosxpPassword = getSecret('/run/secrets/hosxp-db-password', 'HOSxP DB password');
+const regDBPassword = getSecret('/run/secrets/subscribe-db-password', 'Registration DB password');
+const redisPassword = getSecret('/run/secrets/redis-subscribe', 'Redis password');
 
-const hosxpHost = process.env.HOSXP_HOST;
-const hosxpUser = process.env.HOSXP_USER;
-const hosxpPassword = process.env.HOSXP_PASSWORD;
-const hosxpDatabase = process.env.HOSXP_DATABASE;
-const hosxpCharSet = process.env.HOSXP_CHAR_SET; 
+// --- Database Connections ---
+const redisClient = createClient({
+    socket: {
+        host: 'redis-subscribe',
+        port: 6379
+    },
+    password: redisPassword
+});
 
-const regDBHost = process.env.SUBSCRIBE_DB_HOST;
-const regDBUser = process.env.SUBSCRIBE_DB_USER;
-const regDBPassword = process.env.SUBSCRIBE_DB_PASSWORD;
-const regDBName = process.env.SUBSCRIBE_DB_NAME;
-
-const redisUrl = process.env.REDIS_URL;
-
-// 1. Connect to Redis (tempList)
-// Initialize Redis ONCE
-const redisClient = createClient({ url: redisUrl });
 redisClient.on('error', err => console.error('Redis Client Error', err));
+redisClient.on('connect', () => console.log('Redis Client Connected'));
 
-// 2. Connect to Hospital DB (ovst)
-// Create the connection pool. The pool-specific settings are the defaults
 const hosDb = mysql.createPool({
-    host: hosxpHost,
-    user: hosxpUser,
-    database: hosxpDatabase,
+    host: process.env.HOSXP_HOST,
+    user: process.env.HOSXP_USER,
+    database: process.env.HOSXP_DATABASE,
     password: hosxpPassword,
-    charset: hosxpCharSet, 
+    charset: process.env.HOSXP_CHAR_SET,
+    connectionLimit: 10 // Added connection limit for safety
 });
 
-// 3. Connect to Registration DB (registerList)
-// (Removed the 'await' here because createPool is synchronous)
 const regDb = mysql.createPool({
-    host: regDBHost,
-    user: regDBUser,
+    host: process.env.SUBSCRIBE_DB_HOST,
+    user: process.env.SUBSCRIBE_DB_USER,
+    database: process.env.SUBSCRIBE_DB_NAME,
     password: regDBPassword,
-    database: regDBName
+    connectionLimit: 10
 });
 
-async function startIngestion() {
-    let limitProcessedVN = vnTomorrow() + '000000'; 
+// --- Core Logic ---
+async function poll() {
+    try {
+        console.log(`Polling HOS DB for new visits from VN: ${lastProcessedVn} ...`);
 
-    console.log("Starting Ingestion Service...");
+        const [newVisits] = await hosDb.query(
+            `SELECT ovst.hn, ovst.vn, patient.fname as fname, patient.lname as lname, patient.cid as cid 
+             FROM ovst 
+             INNER JOIN patient ON ovst.hn = patient.hn 
+             WHERE ovst.vstdate = curdate() 
+               AND ovst.vsttime <= CURTIME() 
+               AND ovst.ovstist IN ('01', '02', '03', '04') 
+               AND ovst.vn > ? 
+             ORDER BY ovst.vn ASC`,
+            [lastProcessedVn]
+        );            
 
-    // Connect to Redis
-    await redisClient.connect();
+        if (newVisits.length > 0) {
+            const hnsToCheck = newVisits.map(v => v.hn);
 
-    // 4. The Polling Function
-    async function poll() {
-        try {
-            console.log(`Polling HOS DB for new visits since VN: ${lastProcessedVn} to VN: ${limitProcessedVN}...`);
-
-            // Fetch new visits
-            const [newVisits] = await hosDb.query(
-                `SELECT hn, vn FROM ovst WHERE vn > ? AND vn < ? ORDER BY vn ASC`, 
-                [lastProcessedVn, limitProcessedVN]
+            const [registeredPatients] = await regDb.query(
+                `SELECT hn FROM registerList WHERE hn IN (?)`,
+                [hnsToCheck]
             );
 
-            if (newVisits.length > 0) {
-                // Extract HNs to check against registerList
-                const hnsToCheck = newVisits.map(v => v.hn);
+            // FIXED: Using a Set for O(1) lookups instead of an improperly formatted Map
+            const registeredHNs = new Set(registeredPatients.map(p => p.hn));
 
-                // Check which of these HNs are registered for alerts
-                const [registeredPatients] = await regDb.query(
-                    `SELECT hn FROM registerList WHERE hn IN (?)`, 
-                    [hnsToCheck]
-                );
+            for (const visit of newVisits) {
+                if (registeredHNs.has(visit.hn)) {
+                    const redisKey = `active_visit:${visit.hn}`;
 
-                const registeredHNs = new Set(registeredPatients.map(p => p.hn));
+                    // Ensure all values passed to Redis are strings to avoid type errors
+                    await redisClient.hSet(redisKey, {
+                        vn: String(visit.vn),
+                        cid: String(visit.cid || ''),
+                        fname: String(visit.fname || ''),
+                        lname: String(visit.lname || ''),
+                        lab_status: 'pending',
+                        pharmacy_status: 'pending'
+                    });
 
-                // Process matches and push to Redis tempList
-                for (const visit of newVisits) {
-                    if (registeredHNs.has(visit.hn)) {
-                        const redisKey = `active_visit:${visit.hn}`;
-                        
-                        // Store visit data as a Redis Hash
-                        await redisClient.hSet(redisKey, {
-                            vn: visit.vn,
-                            lab_status: 'pending',
-                            pharmacy_status: 'pending'
-                        });
+                    // Set TTL (Expire after 18 hours)
+                    await redisClient.expire(redisKey, 18 * 60 * 60);
 
-                        // Set TTL (Expire after 18 hours to auto-cleanup tomorrow)
-                        await redisClient.expire(redisKey, 18 * 60 * 60);
-                        
-                        console.log(`Added HN ${visit.hn} (VN: ${visit.vn}) to Redis tempList.`);
-                    }
-                    
-                    // Update High-Water Mark
-                    lastProcessedVn = visit.vn; 
+                    console.log(`Added HN ${visit.hn} ${visit.fname} ${visit.lname} (CID: ${visit.cid}) to Redis tempList.`);
                 }
-            } else {
-                console.log("No new visits found.");
+
+                // Update High-Water Mark inside the loop so if it crashes, it resumes accurately
+                lastProcessedVn = visit.vn;
             }
-
-        } catch (error) {
-            console.error("Error during ingestion cycle:", error);
-        } finally {
-            // Schedule the NEXT run only AFTER this run has completely finished (or errored out)
-            setTimeout(poll, POLLING_INTERVAL_MS);
+        } else {
+            console.log("No new visits found.");
         }
-    }
 
-    // Kick off the first polling cycle
+    } catch (error) {
+        console.error("Error during ingestion cycle:", error);
+    } finally {
+        setTimeout(poll, POLLING_INTERVAL_MS);
+    }
+}
+
+async function startIngestion() {
+    console.log("Starting Ingestion Service...");
+    await redisClient.connect();
     poll();
 }
 
+// --- Graceful Shutdown ---
+async function shutdown() {
+    console.log("Shutting down gracefully...");
+    await redisClient.quit();
+    await hosDb.end();
+    await regDb.end();
+    process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+// Initialize
 startIngestion();
-
-function vnToday() {
-  const now = new Date();
-
-  // 1. Get the Buddhist Year (Gregorian Year + 543) and extract the last 2 digits
-  const buddhistYear = now.getFullYear() + 543;
-  const yy = String(buddhistYear).slice(-2);
-
-  // 2. Get the current month (getMonth is 0-indexed, so we add 1)
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-
-  // 3. Get the current date
-  const dd = String(now.getDate()).padStart(2, '0');
-
-  // Combine them all together
-  const twelveDigitNumber = `${yy}${mm}${dd}`;
-  
-  return twelveDigitNumber;
-}
-
-function vnYesterday() {
-  const now = new Date();
-  now.setDate(now.getDate() - 1);
-
-  // 1. Get the Buddhist Year (Gregorian Year + 543) and extract the last 2 digits
-  const buddhistYear = now.getFullYear() + 543;
-  const yy = String(buddhistYear).slice(-2);
-
-  // 2. Get the current month (getMonth is 0-indexed, so we add 1)
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-
-  // 3. Get the current date
-  const dd = String(now.getDate()).padStart(2, '0');
-
-  // Combine them all together
-  const twelveDigitNumber = `${yy}${mm}${dd}`;
-  
-  return twelveDigitNumber;
-}
-
-function vnTomorrow() {
-  const now = new Date();
-  now.setDate(now.getDate() + 1);
-
-  // 1. Get the Buddhist Year (Gregorian Year + 543) and extract the last 2 digits
-  const buddhistYear = now.getFullYear() + 543;
-  const yy = String(buddhistYear).slice(-2);
-
-  // 2. Get the current month (getMonth is 0-indexed, so we add 1)
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-
-  // 3. Get the current date
-  const dd = String(now.getDate()).padStart(2, '0');
-
-  // Combine them all together
-  const twelveDigitNumber = `${yy}${mm}${dd}`;
-  
-  return twelveDigitNumber;
-}

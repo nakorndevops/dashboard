@@ -7,22 +7,29 @@ import mysql from "mysql2/promise";
 import { verifyAPIkey } from './module/verifyApiKey.js';
 
 // Read .env
+let hosxpPassword = '';
+try {
+    hosxpPassword = fs.readFileSync('/run/secrets/hosxp-db-password', 'utf8').trim();
+} catch (err) {
+    console.error("CRITICAL: Failed to read HOSxP DB password from secret:", err.message);
+    process.exit(1); // Stop the app if it can't get the password
+}
+console.log(hosxpPassword ? "Successfully read HOSxP DB password from secret." : "HOSxP DB password is empty!");
 const port = process.env.PORT || 3006;
-const mysql_host = process.env.MYSQL_HOST;
-const mysql_user = process.env.MYSQL_USER;
-const mysql_password = process.env.MYSQL_PASSWORD;
-const mysql_database = process.env.MYSQL_DATABASE;
-const char_set = process.env.CHAR_SET;
+const hosxpHost = process.env.HOSXP_HOST;
+const hosxpUser = process.env.HOSXP_USER;
+const hosxpDatabase = process.env.HOSXP_DATABASE;
+const hosxpCharSet = process.env.HOSXP_CHAR_SET;
 
 const app = express();
 app.use(express.json());
 
 // Create the connection pool. The pool-specific settings are the defaults
 const pool = mysql.createPool({
-  host: mysql_host,
-  user: mysql_user,
-  database: mysql_database,
-  password: mysql_password,
+  host: hosxpHost,
+  user: hosxpUser,
+  database: hosxpDatabase,
+  password: hosxpPassword,
   waitForConnections: true,
   connectionLimit: 10,
   maxIdle: 10, // max idle connections, the default value is the same as `connectionLimit`
@@ -30,7 +37,7 @@ const pool = mysql.createPool({
   queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
-  charset: char_set, // Set the character set here
+  charset: hosxpCharSet, // Set the character set here
 });
 
 // หาคนไข้ตาม ward
