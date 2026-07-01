@@ -83,11 +83,11 @@ async function poll() {
 
             for (const visit of newVisits) {
                 if (registeredHNs.has(visit.hn)) {
-                    const redisKey = `active_visit:${visit.vn}`;
+                    const redisKey = `active_visit:${visit.hn}`;
 
                     // Ensure all values passed to Redis are strings to avoid type errors
                     await redisClient.hSet(redisKey, {
-                        hn: String(visit.hn),
+                        vn: String(visit.vn),
                         cid: String(visit.cid || ''),
                         fname: String(visit.fname || ''),
                         lname: String(visit.lname || ''),
@@ -98,7 +98,7 @@ async function poll() {
                     // Set TTL (Expire after 18 hours)
                     await redisClient.expire(redisKey, 18 * 60 * 60);
 
-                    console.log(`Added HN ${visit.hn} VN ${visit.vn} ${visit.fname} ${visit.lname} (CID: ${visit.cid}) to Redis tempList.`);
+                    console.log(`Added HN ${visit.hn} ${visit.fname} ${visit.lname} (CID: ${visit.cid}) to Redis tempList.`);
                 }
 
                 // Update High-Water Mark inside the loop so if it crashes, it resumes accurately

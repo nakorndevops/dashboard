@@ -1,13 +1,14 @@
 {
-  "name": "ingestion",
+  "name": "monitor drug",
   "version": "1.0.0",
   "type": "module",
-  "description": "Ingestion",
+  "description": "Monitor Drug",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "redis": "^6.0.0"
+    "redis": "^6.0.0",
+    "mysql2": "^3.14.3"
   }
 }

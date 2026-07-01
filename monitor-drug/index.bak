@@ -83,12 +83,12 @@ async function startMonitor() {
             for (const key of keys) {
                 // Safety check: explicitly convert to string to guarantee .split() works
                 const keyString = String(key);
-                const vn = keyString.split(':')[1];
+                const hn = keyString.split(':')[1];
 
                 const visitData = await redisClient.hGetAll(keyString);
 
                 // Skip if we are missing essential data
-                if (!visitData || !vn) continue;
+                if (!visitData || !visitData.vn) continue;
 
                 // --- MOCK CHECK: Replace with actual Lab/Pharmacy DB queries ---
                 // const isDrugReady = await checkDrugDatabase(visitData.vn);
@@ -111,12 +111,12 @@ async function startMonitor() {
                         AND rq.new_rx_queue IS NOT NULL
                         AND kd.dispense_room IS NOT NULL
                         AND EXISTS (SELECT 1 FROM rx_operator AS ro WHERE ro.vn = o.vn AND ro.prepare_rx = 'Y');`,
-                    [vn]
+                    [visitData.vn]
                 );
 
                 if (drugStatus.length > 0 && visitData.pharmacy_status === 'pending') {
 
-                    console.log(`Drug ready for VN: ${vn}. Sending message to patient...`);
+                    console.log(`Drug ready for HN: ${hn}. Sending message to patient...`);
 
                     const row = drugStatus[0];
 
@@ -130,7 +130,7 @@ async function startMonitor() {
                         building = "ห้องยาศูนย์สุขภาพชุมชนเมือง ชั้น 1";
                     }
 
-                    const message = `HN ${visitData.hn}\nVN ${vn}\nคุณ${visitData.fname} ${visitData.lname}\nยาของคุณพร้อมแล้ว\nคิวรับยาที่ ${row.series}-${row.queue}\nรับยาได้ที่ ${building}\nช่องรับยา ${row.counter}`;
+                    const message = `HN ${hn}\nคุณ ${visitData.fname} ${visitData.lname}\nยาของคุณพร้อมแล้ว\nคิวรับยาที่ ${row.series}-${row.queue}\nรับยาได้ที่ ${building}\nช่องรับยา ${row.counter}`;
 
                     // Send alert to MOPH_ALERT
                     const payload = {
@@ -144,7 +144,7 @@ async function startMonitor() {
                             }
                         ],
                         "message_title": "แจ้งเตือนรับยา",
-                        "message_html": "<div><strong>ยาได้แล้ว</strong></div>",
+                        "message_html": "<div><strong>" +message+"</strong></div>",
                         "message_text": "ทดสอบระบบ Alert 3.1",
                         "message_type": "HPT"
                     };
@@ -162,12 +162,12 @@ async function startMonitor() {
                         if (response.ok) {
                             // Update Redis state so we don't alert them again today
                             await redisClient.hSet(key, 'pharmacy_status', 'notified');
-                            console.log(`Successfully notified VN: ${vn}`);
+                            console.log(`Successfully notified HN: ${hn}`);
                         } else {
-                            console.error(`Failed to notify VN: ${vn}. Status: ${response.status}`);
+                            console.error(`Failed to notify HN: ${hn}. Status: ${response.status}`);
                         }
                     } catch (fetchErr) {
-                        console.error(`Network error notifying VN: ${vn}`, fetchErr);
+                        console.error(`Network error notifying HN: ${hn}`, fetchErr);
                     }
 
                 }

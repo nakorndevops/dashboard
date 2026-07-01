@@ -230,6 +230,7 @@ services:
       - ./jwt/monitor-drug/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
     secrets:
       - redis-subscribe
+      - hosxp-db-password
 
 # DATABASES 
 
