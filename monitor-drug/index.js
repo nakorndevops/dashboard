@@ -3,7 +3,7 @@ import mysql from 'mysql2/promise';
 import { createClient } from 'redis';
 
 // Define configuration constants
-const CHECK_INTERVAL_MS = 120000; // Check every 2 minutes
+const CHECK_INTERVAL_MS = 60000; // Check every 1 minutes
 const mophAlertUrl = process.env.MOPH_ALERT_URL;
 
 console.log("Initializing Event Monitor Service...");
@@ -90,9 +90,6 @@ async function startMonitor() {
                 // Skip if we are missing essential data
                 if (!visitData || !vn) continue;
 
-                // --- MOCK CHECK: Replace with actual Lab/Pharmacy DB queries ---
-                // const isDrugReady = await checkDrugDatabase(visitData.vn);
-
                 // Check Drug Ready
                 const [drugStatus] = await hosDb.query(
                     `SELECT
@@ -121,32 +118,163 @@ async function startMonitor() {
                     const row = drugStatus[0];
 
                     let building = '';
+                    let room = '';
 
                     if (row.dispense_room == '183') {
-                        building = "ห้องยาผู้ป่วยนอกหมายเลข 13 อาคารอำนวยการชั้น 1";
+                        room = "ห้องยาผู้ป่วยนอกหมายเลข 13"
+                        building = "อาคารอำนวยการชั้น 1";
                     } else if (row.dispense_room == '184') {
-                        building = "ห้องยาผู้ป่วยนอกหมายเลข 31 อาคารอุบัติเหตุและฉุกเฉิน ชั้น 1";
+                        room = "ห้องยาผู้ป่วยนอกหมายเลข 31"
+                        building = "อาคารอุบัติเหตุและฉุกเฉิน ชั้น 1";
                     } else if (row.dispense_room == '392') {
-                        building = "ห้องยาศูนย์สุขภาพชุมชนเมือง ชั้น 1";
+                        room = "ห้องยาศูนย์สุขภาพชุมชนเมือง ชั้น 1";
+                        building = "อาคารศูนย์สุขภาพชุมชนเมือง";
                     }
 
-                    const message = `HN ${visitData.hn}\nVN ${vn}\nคุณ${visitData.fname} ${visitData.lname}\nยาของคุณพร้อมแล้ว\nคิวรับยาที่ ${row.series}-${row.queue}\nรับยาได้ที่ ${building}\nช่องรับยา ${row.counter}`;
+                    const messageHTML = `
+                    <strong>
+                    <p>คิวรับยาที่ ${row.series}-${row.queue}</p>                    
+                    <p>HN ${visitData.hn}</p>
+                    <p>คุณ${visitData.fname} ${visitData.lname}</p>
+                    <p>ยาของคุณพร้อมแล้ว</p>
+                    <p>รับยาได้ที่ ${room}</p>
+                    <p>ช่องรับยา ${row.counter}</p>                  
+                    <p>รับยาได้ที่ ${building}</p>
+                    </strong>
+                    `;
+                    
+                    const messageText = `คุณ${visitData.fname} ${visitData.lname}`;
 
-                    // Send alert to MOPH_ALERT
                     const payload = {
-                        "cid": [
-                            "3769900072101"
+                        cid: [
+                            "3769900072101" // Note: This is currently hardcoded. Did you mean to use visitData.cid?
                         ],
-                        "messages": [
+                        messages: [
                             {
-                                "text": message,
-                                "type": "text"
+                                type: "flex",
+                                altText: "แจ้งเตือนคิวรับยา",
+                                contents: {
+                                    type: "bubble",
+                                    body: {
+                                        type: "box",
+                                        layout: "vertical",
+                                        contents: [
+                                            {
+                                                type: "image",
+                                                url: "https://dhdoctor.tranghos.moph.go.th/logo",
+                                                size: "xs"
+                                            },
+                                            {
+                                                type: "text",
+                                                text: `คิวรับยา ${row.series}-${row.queue}`,
+                                                weight: "bold",
+                                                size: "xl",
+                                                color: "#dc3545",
+                                                align: "center"
+                                            },
+                                            {
+                                                type: "box",
+                                                layout: "vertical",
+                                                margin: "lg",
+                                                spacing: "sm",
+                                                contents: [
+                                                    {
+                                                        type: "box",
+                                                        layout: "baseline",
+                                                        spacing: "sm",
+                                                        contents: [
+                                                            {
+                                                                type: "text",
+                                                                text: `HN ${visitData.hn}`,
+                                                                wrap: true,
+                                                                color: "#666666",
+                                                                size: "md",
+                                                                flex: 5,
+                                                                weight: "bold"
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        type: "box",
+                                                        layout: "baseline",
+                                                        spacing: "sm",
+                                                        contents: [
+                                                            {
+                                                                type: "text",
+                                                                text: `คุณ${visitData.fname} ${visitData.lname}`,
+                                                                wrap: true,
+                                                                color: "#666666",
+                                                                size: "md",
+                                                                flex: 5,
+                                                                weight: "regular"
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        type: "box",
+                                                        layout: "vertical",
+                                                        contents: [
+                                                            {
+                                                                type: "text",
+                                                                text: "ยาของท่านพร้อมแล้ว รับยาได้ที่",
+                                                                color: "#dc3545",
+                                                                size: "md",
+                                                                weight: "bold"
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        type: "box",
+                                                        layout: "vertical",
+                                                        contents: [
+                                                            {
+                                                                type: "text",
+                                                                text: `${room}`,
+                                                                size: "md",
+                                                                color: "#0d6efd",
+                                                                weight: "bold"
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        type: "box",
+                                                        layout: "vertical",
+                                                        contents: [
+                                                            {
+                                                                type: "text",
+                                                                text: `ช่องรับยา ${row.counter}`,
+                                                                size: "md",
+                                                                weight: "bold",
+                                                                color: "#0d6efd"
+                                                            }
+                                                        ]
+                                                    },
+                                                    {
+                                                        type: "box",
+                                                        layout: "vertical",
+                                                        contents: [
+                                                            {
+                                                                type: "text",
+                                                                text: `${building}`,
+                                                                size: "md",
+                                                                color: "#0d6efd",
+                                                                weight: "bold"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                        spacing: "none",
+                                        margin: "none"
+                                    }
+                                }
                             }
                         ],
-                        "message_title": "แจ้งเตือนรับยา",
-                        "message_html": "<div><strong>ยาได้แล้ว</strong></div>",
-                        "message_text": "ทดสอบระบบ Alert 3.1",
-                        "message_type": "HPT"
+                        "message_title": "แจ้งเตือนคิวรับยา",
+                        "message_text": messageText,
+                        "message_html": messageHTML,
+                        "message_type": "HPT" 
                     };
 
                     try {
@@ -182,26 +310,6 @@ async function startMonitor() {
 
     // Kick off the first checking cycle
     check();
-}
-
-// Dummy function to simulate checking an external database for drug availability
-async function checkDrugDatabase(hn, vn) {
-    // In production, query your pharmacy database here
-    //return Math.random() > 0.8; // Randomly returns true 20% of the time for testing
-    // return false;
-
-    const [newVisits] = await hosDb.query(
-        `SELECT ovst.hn, ovst.vn, patient.fname as fname, patient.lname as lname, patient.cid as cid 
-             FROM ovst 
-             INNER JOIN patient ON ovst.hn = patient.hn 
-             WHERE ovst.vstdate = curdate() 
-               AND ovst.vsttime <= CURTIME() 
-               AND ovst.ovstist IN ('01', '02', '03', '04') 
-               AND ovst.vn > ? 
-             ORDER BY ovst.vn ASC`,
-        [lastProcessedVn]
-    );
-
 }
 
 // Start the service

@@ -32,6 +32,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '/html/welcome/index.html'));
 });
 
+app.get('/logo', (req, res) => {
+    // Join current directory with the filename for an absolute path
+    res.sendFile(path.join(__dirname, '/image/TrangHosLogo.png'));
+});
+
 app.get('/403', (req, res) => {
     // Join current directory with the filename for an absolute path
     res.sendFile(path.join(__dirname, '/html/error/403.html'));

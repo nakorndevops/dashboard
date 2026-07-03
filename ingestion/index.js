@@ -3,7 +3,7 @@ import mysql from 'mysql2/promise';
 import { createClient } from 'redis';
 
 // --- Configuration ---
-const POLLING_INTERVAL_MS = 300000; // 5 minutes
+const POLLING_INTERVAL_MS = 60000; // 1 minutes
 let lastProcessedVn = '000000000000'; 
 
 // Helper function to read secrets securely
@@ -59,9 +59,10 @@ async function poll() {
         console.log(`Polling HOS DB for new visits from VN: ${lastProcessedVn} ...`);
 
         const [newVisits] = await hosDb.query(
-            `SELECT ovst.hn, ovst.vn, patient.fname as fname, patient.lname as lname, patient.cid as cid 
+            `SELECT ovst.hn, ovst.vn, ovst.main_dep, patient.fname as fname, patient.lname as lname, patient.cid as cid, kskdepartment.department
              FROM ovst 
              INNER JOIN patient ON ovst.hn = patient.hn 
+             INNER JOIN kskdepartment ON ovst.main_dep = kskdepartment.depcode
              WHERE ovst.vstdate = curdate() 
                AND ovst.vsttime <= CURTIME() 
                AND ovst.ovstist IN ('01', '02', '03', '04') 
@@ -91,6 +92,7 @@ async function poll() {
                         cid: String(visit.cid || ''),
                         fname: String(visit.fname || ''),
                         lname: String(visit.lname || ''),
+                        department: String(visit.department || ''),
                         lab_status: 'pending',
                         pharmacy_status: 'pending'
                     });

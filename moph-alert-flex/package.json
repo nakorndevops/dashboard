@@ -1,0 +1,14 @@
+{
+  "name": "moph-alert-flex",
+  "version": "1.0.0",
+  "description": "Flex Message Alert service for MOPH",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
