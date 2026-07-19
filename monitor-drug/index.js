@@ -136,10 +136,10 @@ async function startMonitor() {
                     <p>คิวรับยาที่ ${row.series}-${row.queue}</p>                    
                     <p>HN ${visitData.hn}</p>
                     <p>คุณ${visitData.fname} ${visitData.lname}</p>
-                    <p>ยาของคุณพร้อมแล้ว</p>
-                    <p>รับยาได้ที่ ${room}</p>
+                    <p>ยาของคุณพร้อมแล้ว รับยาได้ที่</p>
+                    <p>${room}</p>
                     <p>ช่องรับยา ${row.counter}</p>                  
-                    <p>รับยาได้ที่ ${building}</p>
+                    <p>${building}</p>
                     </strong>
                     `;
                     
@@ -147,7 +147,7 @@ async function startMonitor() {
 
                     const payload = {
                         cid: [
-                            "3769900072101" // Note: This is currently hardcoded. Did you mean to use visitData.cid?
+                            visitData.cid 
                         ],
                         messages: [
                             {
@@ -255,7 +255,7 @@ async function startMonitor() {
                                                         contents: [
                                                             {
                                                                 type: "text",
-                                                                text: `${building}`,
+                                                                text: building,
                                                                 size: "md",
                                                                 color: "#0d6efd",
                                                                 weight: "bold"

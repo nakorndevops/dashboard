@@ -232,6 +232,23 @@ services:
       - redis-subscribe
       - hosxp-db-password
 
+# Monitor-appointment Service
+  monitor-appointment:
+    <<: *node-service
+    build:
+      context: ./monitor-appointment
+      dockerfile: Dockerfile
+    container_name: monitor-appointment
+    depends_on:
+      subscribe-db:
+        condition: service_healthy
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./jwt/monitor-appointment/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
+    secrets:
+      - subscribe-db-password
+      - hosxp-db-password
+
 # DATABASES 
 
   # Redis

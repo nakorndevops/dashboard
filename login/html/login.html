@@ -174,8 +174,12 @@
 
 <script>
         const mainUrl = window.location.origin;
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        
         document.addEventListener('DOMContentLoaded', async function () {
-            const redirectUrl = mainUrl+'/login/providerID';
+            const targetUrl = encodeURIComponent(urlParams.get('targetUrl') || '/');
+            const redirectUrl = `${mainUrl}/login/providerID`;
             const providerIdUrl = 'https://moph.id.th/oauth/redirect';
             const container = document.getElementById('providerLoginContainer');
             const divider = document.getElementById('providerDivider');
@@ -192,9 +196,8 @@
 
                 // Ensure clientID exists before generating the link
                 if (clientIdData && clientIdData.clientID) {
-                    // Create providerId Link
-                    const providerIdLink = `${providerIdUrl}?client_id=${clientIdData.clientID}&redirect_uri=${redirectUrl}&response_type=code`;
-                    
+                    const providerIdLink = `${providerIdUrl}?client_id=${clientIdData.clientID}&redirect_uri=${encodeURIComponent(redirectUrl)}&response_type=code&target=${targetUrl}`;
+
                     // Create Anchor tag
                     const linkElement = document.createElement('a');
                     linkElement.href = providerIdLink;
@@ -221,6 +224,7 @@
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
             event.preventDefault();
 
+            const targetUrl = urlParams.get('targetUrl') || '/';
             const usernameInput = document.getElementById('username').value;
             const passwordInput = document.getElementById('password').value;
             const errorMessage = document.getElementById('errorMessage');
@@ -232,7 +236,8 @@
 
             const payload = {
                 username: usernameInput,
-                password: passwordInput
+                password: passwordInput,
+                setCookie: true,
             };
 
             const authEndpoint = '/login/password';
@@ -247,7 +252,7 @@
                 });
 
                 if (response.status === 200) {
-                    window.location.href = '/food';
+                    window.location.href = targetUrl || '/';
                 } else {
                     const data = await response.json();
                     errorMessage.textContent = data.error || 'Login failed. Please try again.';

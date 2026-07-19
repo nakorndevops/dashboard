@@ -1,0 +1,13 @@
+{
+  "name": "monitor appointment",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Monitor Appointment",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.14.3"
+  }
+}

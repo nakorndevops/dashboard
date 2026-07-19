@@ -93,7 +93,6 @@ async function poll() {
                         fname: String(visit.fname || ''),
                         lname: String(visit.lname || ''),
                         department: String(visit.department || ''),
-                        lab_status: 'pending',
                         pharmacy_status: 'pending'
                     });
 

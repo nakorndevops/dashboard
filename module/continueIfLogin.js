@@ -10,9 +10,20 @@ const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
 const verifyToken = async (req, res, next) => {
   const { access_token, refresh_token, profile } = req.cookies;
 
+  // Isolated URL components
+  const protocol = req.protocol;          // "http" or "https"
+  const host = req.get('host');           // "localhost:3000" or "example.com"
+  const mainPath = process.env.MAIN_PATH;
+
+  // Construct the complete URL
+  const targetUrl = encodeURI(`${protocol}://${host}${mainPath}`);
+
+  // Construct the redirect URL for login
+  const redirectUrl = `${loginURL}?targetUrl=${targetUrl}`;
+  
   // 0. If no tokens exist, immediately reject and send to login
   if (!access_token && !refresh_token) {
-    return res.redirect(loginURL);
+    return res.redirect(redirectUrl);
   }
 
   // 1. Check if the user's position_id is in the allowed permission group
@@ -67,7 +78,8 @@ const verifyToken = async (req, res, next) => {
   res.clearCookie('access_token');
   res.clearCookie('refresh_token');
   res.clearCookie('profile'); 
-  return res.redirect(loginURL);
+
+  return res.redirect(redirectUrl);
 };
 
 module.exports = verifyToken;
