@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OR Checkpoint</title>
+    <!-- Include html5-qrcode library -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        /* Mobile-First CSS Variables & Reset */
+        :root {
+            --primary: #007bff;
+            --primary-hover: #0056b3;
+            --success: #28a745;
+            --success-hover: #218838;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --danger: #dc3545;
+            --border-radius: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Views */
+        .view {
+            display: none;
+            padding: 24px 16px;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        /* Typography & Utilities */
+        h2 {
+            margin-bottom: 16px;
+            text-align: center;
+            color: var(--primary);
+        }
+
+        h3 {
+            margin-bottom: 12px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 4px;
+        }
+
+        .text-red {
+            color: var(--danger);
+            font-weight: bold;
+        }
+
+        /* Inputs & Buttons */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .search-row input[type="text"] {
+            flex: 1;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+        }
+
+        .search-row button {
+            width: auto;
+            margin-bottom: 0;
+            padding: 0 16px;
+        }
+
+        .qr-action-container {
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        #btn-scan-qr {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: var(--border-radius);
+            background-color: #fff;
+            padding: 12px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+
+        #btn-scan-qr:hover {
+            background-color: #f8f9fa;
+            border-color: var(--primary);
+            box-shadow: 0 4px 8px rgba(0,123,255,0.15);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.btn-danger {
+            background-color: var(--danger);
+        }
+
+        button.btn-danger:hover {
+            background-color: #b02a37;
+        }
+
+        button.btn-success {
+            background-color: var(--success);
+        }
+
+        button.btn-success:hover {
+            background-color: var(--success-hover);
+        }
+
+        /* QR Scanner Container */
+        #reader-container {
+            display: none;
+            margin-bottom: 16px;
+        }
+        
+        #reader {
+            width: 100%;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        /* Profile Layout */
+        #profile-section {
+            position: relative;
+            z-index: 1;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .profile-img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--primary);
+        }
+
+        .profile-details p {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        /* Watermark Layer */
+        #watermark-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.07;
+        }
+
+        /* Radio Form */
+        .radio-list {
+            margin: 16px 0;
+            z-index: 1;
+            position: relative;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #eee;
+            margin-bottom: 8px;
+            border-radius: var(--border-radius);
+            background: #fff;
+        }
+
+        .radio-item input {
+            margin-right: 12px;
+            transform: scale(1.3);
+        }
+
+        .radio-item label {
+            flex: 1;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* Error View */
+        #error-message {
+            color: var(--danger);
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app-container">
+
+        <!-- 1. SEARCH VIEW -->
+        <div id="search-view" class="view active">
+            <h2>OR Checkpoint</h2>
+            
+            <div class="form-group" id="manual-input-group">
+                <label for="hn-input">Enter HN:</label>
+                <div class="search-row">
+                    <input type="text" id="hn-input" inputmode="numeric" placeholder="Enter HN..." autocomplete="off">
+                    <button id="btn-search">SEARCH</button>
+                </div>
+                
+                <div class="qr-action-container">
+                    <p style="margin-bottom: 12px; font-size: 14px; color: var(--text-muted); font-weight: 600;">— OR —</p>
+                    <img src="https://dhdoctor.tranghos.moph.go.th/or-checkpoint/image/qr.png" id="btn-scan-qr" alt="Scan QR Code">
+                    <p style="margin-top: 8px; font-size: 14px; color: var(--text-muted);">Tap to scan QR Code</p>
+                </div>
+            </div>
+
+            <!-- QR Reader Container -->
+            <div id="reader-container">
+                <div id="reader"></div>
+                <button id="btn-cancel-scan" class="btn-danger" style="margin-top: 12px;">Cancel Scan</button>
+            </div>
+        </div>
+
+        <!-- 2. PROFILE & STATUS VIEW -->
+        <div id="profile-view" class="view">
+            <div id="watermark-layer"></div>
+
+            <div id="profile-section">
+                <h3>Patient Profile</h3>
+                <div class="profile-header">
+                    <img id="patient-img" class="profile-img"
+                        src="https://dhdoctor.tranghos.moph.go.th/or-checkpoint/image/blankProfile.png"
+                        alt="Patient Image">
+                    <div>
+                        <h4 id="patient-name">-</h4>
+                        <p><strong>HN:</strong> <span id="patient-hn">-</span></p>
+                        <p><strong>Age:</strong> <span id="patient-age">-</span></p>
+                    </div>
+                </div>
+                <div class="profile-details">
+                    <p><strong>AN:</strong> <span id="patient-an">-</span></p>
+                    <p><strong>Department:</strong> <span id="patient-dept">-</span></p>
+                    <p><strong>Ward:</strong> <span id="patient-ward">-</span></p>
+                    <p><strong>Diagnosis:</strong> <span id="patient-diag">-</span></p>
+                    <p><strong>Operation:</strong> <span id="patient-op">-</span></p>
+                    <p><strong>Doctor:</strong> <span id="patient-doc">-</span></p>
+                    <p><strong>Room:</strong> <span id="patient-room">-</span></p>
+                </div>
+            </div>
+
+            <div style="margin-top: 24px; position: relative; z-index: 1;">
+                <h3>Update Status</h3>
+                <div id="status-radio-container" class="radio-list">
+                    <!-- Radio buttons injected via JS -->
+                </div>
+                <button id="btn-submit-status">Submit Status</button>
+                <button id="btn-cancel" class="btn-danger" style="margin-top: 12px;">Cancel / Go Back</button>
+            </div>
+        </div>
+
+        <!-- 3. ERROR VIEW -->
+        <div id="error-view" class="view">
+            <h2>Error</h2>
+            <p id="error-message">Something went wrong.</p>
+            <button id="btn-back-error" class="btn-danger">Go Back</button>
+        </div>
+
+    </div>
+
+    <script>
+        // === GLOBAL STATE ===
+        let currentPatientData = null;
+        let html5QrCode = null;
+
+        // === UTILITY FUNCTIONS ===
+
+        // Switch between views
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        // Handle Null values returning red "N/A"
+        function formatValue(val) {
+            if (val === null || val === undefined || val === '') {
+                return '<span class="text-red">N/A</span>';
+            }
+            return val;
+        }
+
+        // Read specific variable from a JSON cookie
+        function getWatermarkCode() {
+            const cookies = document.cookie.split(';');
+            let codeValue = 'CONFIDENTIAL'; // Default
+
+            for (let i = 0; i < cookies.length; i++) {
+                let c = cookies[i].trim();
+                if (c.startsWith('profile=')) {
+                    try {
+                        let cookieStr = decodeURIComponent(c.substring('profile='.length));
+                        if (cookieStr.startsWith('j:')) {
+                            cookieStr = cookieStr.substring(2);
+                        }
+                        const profileObj = JSON.parse(cookieStr);
+                        if (profileObj.code) {
+                            codeValue = profileObj.code;
+                        }
+                    } catch (e) {
+                        console.warn("Could not parse profile cookie as JSON.", e);
+                    }
+                }
+            }
+            return codeValue;
+        }
+
+        // Generate dynamic repeating background using SVG and Base64
+        function applyWatermark() {
+            const code = getWatermarkCode();
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+            <text x="50%" y="50%" transform="rotate(-45 100 100)" font-family="Arial" font-size="22" fill="rgba(0,0,0,1)" font-weight="bold" text-anchor="middle">${code}</text>
+        </svg>`;
+            const bgUrl = `url("data:image/svg+xml;base64,${btoa(svg)}")`;
+            document.getElementById('watermark-layer').style.backgroundImage = bgUrl;
+            document.getElementById('watermark-layer').style.backgroundRepeat = 'repeat';
+        }
+
+        // Show Error Screen
+        function showError(message) {
+            document.getElementById('error-message').innerText = message;
+            showView('error-view');
+        }
+
+        // === QR SCANNER LOGIC ===
+
+        function startScanner() {
+            document.getElementById('manual-input-group').style.display = 'none';
+            document.getElementById('reader-container').style.display = 'block';
+
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            // Prefer back camera
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+                .catch((err) => {
+                    alert("Unable to access camera. Please ensure permissions are granted.");
+                    stopScanner();
+                });
+        }
+
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                }).catch(err => console.error("Failed to stop scanner", err));
+            }
+            document.getElementById('reader-container').style.display = 'none';
+            document.getElementById('manual-input-group').style.display = 'block';
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            stopScanner();
+            document.getElementById('hn-input').value = decodedText;
+            handleSearch(); // Automatically trigger search after scan
+        }
+
+        function onScanFailure(error) {
+            // Background scanning errors, safe to ignore for continuous scanning
+        }
+
+        // === API MOCK IMPLEMENTATIONS ===
+
+        async function getPatientProfile(hn) {
+            try {
+                const response = await fetch("/or-checkpoint/getPatientProfile", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ hn }),
+                });
+                if (!response.ok) throw new Error("Failed to fetch profile");
+                return await response.json();
+            } catch (err) {
+                console.error("Error fetching patient Data:", err);
+                throw err;
+            }
+        }
+
+        async function getStatusList() {
+            try {
+                const responseList = await fetch("/or-monitor/statusList", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                });
+                if (!responseList.ok) throw new Error("Failed to fetch status list");
+                return await responseList.json();
+            } catch (err) {
+                console.error("Error fetching status list:", err);
+                throw err;
+            }
+        }
+
+        async function getPatientStatus(operation_id) {
+            try {
+                const apiUrl = "/or-checkpoint/getPatientStatus";
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ operation_id }),
+                });
+                if (!response.ok) throw new Error("Failed to fetch patient status");
+                return await response.json();
+            } catch (err) {
+                console.error("Error fetching patient status:", err);
+                throw err;
+            }
+        }
+
+        async function setPatientStatus(data) {
+            try {
+                const response = await fetch("/or-checkpoint/setPatientStatus", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data),
+                });
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                return await response.json();
+            } catch (err) {
+                console.error("Error update patient Data:", err);
+                throw err;
+            }
+        }
+
+        // === CORE LOGIC ===
+
+        async function handleSearch() {
+            let rawHn = document.getElementById('hn-input').value.trim();
+
+            // 1. Filter out any non-numeric characters
+            rawHn = rawHn.replace(/\D/g, '');
+
+            if (!rawHn) {
+                alert("Please enter a valid numeric HN.");
+                return;
+            }
+
+            // 2. Pad to 9 characters if shorter
+            const paddedHn = rawHn.padStart(9, '0');
+
+            try {
+                const [profileRes, statusListRes] = await Promise.all([
+                    getPatientProfile(paddedHn),
+                    getStatusList()
+                ]);
+
+                if (!profileRes || profileRes.length === 0) {
+                    throw new Error("Patient not found.");
+                }
+
+                const patient = profileRes[0];
+                currentPatientData = patient; 
+
+                const patientStatusRes = await getPatientStatus(patient.operation_id);
+
+                renderProfile(patient);
+
+                const defaultStatusId = (patientStatusRes && patientStatusRes.length > 0 && patientStatusRes[0].status_id)
+                    ? patientStatusRes[0].status_id
+                    : null;
+
+                renderStatusForm(statusListRes, defaultStatusId);
+                applyWatermark();
+                showView('profile-view');
+
+            } catch (error) {
+                showError(error.message || "An unexpected error occurred while fetching data.");
+            }
+        }
+
+        function renderProfile(patient) {
+            document.getElementById('patient-name').innerHTML = `${formatValue(patient.pname)} ${formatValue(patient.fname)} ${formatValue(patient.lname)}`;
+            document.getElementById('patient-hn').innerHTML = formatValue(patient.hn);
+            document.getElementById('patient-age').innerHTML = formatValue(patient.age);
+            document.getElementById('patient-an').innerHTML = formatValue(patient.an);
+            document.getElementById('patient-dept').innerHTML = formatValue(patient.department);
+            document.getElementById('patient-ward').innerHTML = formatValue(patient.ward);
+            document.getElementById('patient-diag').innerHTML = formatValue(patient.diagnosis);
+            document.getElementById('patient-op').innerHTML = formatValue(patient.operation);
+            document.getElementById('patient-doc').innerHTML = formatValue(patient.doctor);
+            document.getElementById('patient-room').innerHTML = formatValue(patient.room);
+
+            const imgEl = document.getElementById('patient-img');
+            const defaultImg = "https://dhdoctor.tranghos.moph.go.th/or-checkpoint/image/blankProfile.png";
+
+            if (patient.image && patient.image.type === "Buffer" && patient.image.data && patient.image.data.length > 0) {
+                try {
+                    const uint8Array = new Uint8Array(patient.image.data);
+                    const blob = new Blob([uint8Array], { type: 'image/jpeg' });
+                    imgEl.src = URL.createObjectURL(blob);
+                } catch (e) {
+                    console.error("Image parsing failed", e);
+                    imgEl.src = defaultImg;
+                }
+            } else {
+                imgEl.src = defaultImg;
+            }
+        }
+
+        function renderStatusForm(statusList, defaultStatusId) {
+            const container = document.getElementById('status-radio-container');
+            container.innerHTML = '';
+
+            if (!statusList || statusList.length === 0) {
+                container.innerHTML = '<p class="text-red">No statuses available.</p>';
+                return;
+            }
+
+            statusList.forEach(status => {
+                const div = document.createElement('div');
+                div.className = 'radio-item';
+
+                const isChecked = (status.status_id === defaultStatusId) ? "checked" : "";
+
+                div.innerHTML = `
+                <input type="radio" id="status_${status.status_id}" name="patient_status" value="${status.status_id}" ${isChecked}>
+                <label for="status_${status.status_id}">${status.status_description}</label>
+            `;
+                container.appendChild(div);
+            });
+        }
+
+        async function handleSubmitStatus() {
+            if (!currentPatientData) return;
+
+            const selectedRadio = document.querySelector('input[name="patient_status"]:checked');
+            if (!selectedRadio) {
+                alert("Please select a status before submitting.");
+                return;
+            }
+
+            const selectedStatusId = parseInt(selectedRadio.value, 10);
+
+            const payload = {
+                operation_id: currentPatientData.operation_id,
+                hn: currentPatientData.hn,
+                fname: currentPatientData.fname,
+                lname: currentPatientData.lname,
+                room_id: currentPatientData.room_id,
+                status_id: selectedStatusId
+            };
+
+            try {
+                await setPatientStatus(payload);
+                alert("Status updated successfully!");
+                resetApp();
+            } catch (error) {
+                showError("Failed to update status: " + error.message);
+            }
+        }
+
+        function resetApp() {
+            currentPatientData = null;
+            document.getElementById('hn-input').value = '';
+
+            // Stop scanner if it was running while resetting
+            stopScanner();
+            showView('search-view');
+        }
+
+        // === EVENT LISTENERS ===
+        document.addEventListener("DOMContentLoaded", () => {
+            document.getElementById('btn-search').addEventListener('click', handleSearch);
+            document.getElementById('btn-scan-qr').addEventListener('click', startScanner);
+            document.getElementById('btn-cancel-scan').addEventListener('click', stopScanner);
+
+            document.getElementById('hn-input').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') handleSearch();
+            });
+
+            document.getElementById('btn-submit-status').addEventListener('click', handleSubmitStatus);
+            document.getElementById('btn-cancel').addEventListener('click', resetApp);
+            document.getElementById('btn-back-error').addEventListener('click', resetApp);
+        });
+
+    </script>
+</body>
+
+</html>

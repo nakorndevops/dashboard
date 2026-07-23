@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('node:fs');
 
 const refreshTokenRenewURL = process.env.REFRESH_TOKEN_RENEW_URL;
-const loginURL = process.env.LOGIN_URL;
+const loginURL = '/login';
 const permissionGroup = JSON.parse(process.env.PERMISSION_GROUP) || [];
 const accessTokenPublicKey = fs.readFileSync('./access-token/public.pem', 'utf8');
 const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');

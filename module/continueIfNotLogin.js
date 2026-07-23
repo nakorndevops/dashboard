@@ -2,12 +2,13 @@ const jwt = require('jsonwebtoken');
 const fs = require('node:fs');
 
 const refreshTokenRenewURL = process.env.REFRESH_TOKEN_RENEW_URL;
-const callbackUrl = process.env.CALLBACK_URL;
 const accessTokenPublicKey = fs.readFileSync('./access-token/public.pem', 'utf8');
 const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
 
 const verifyToken = async (req, res, next) => {
   const { access_token, refresh_token } = req.cookies;
+
+  const targetUrl = req.query.targetUrl || '/';
 
   // 1. If no tokens exist, immediately reject and send to login
   if (!access_token && !refresh_token) {
@@ -18,7 +19,7 @@ const verifyToken = async (req, res, next) => {
   if (access_token) {
     try {
       jwt.verify(access_token, accessTokenPublicKey, { algorithms: ['RS256'] });
-      return res.redirect(callbackUrl); // Success! Proceed to the protected route
+      return res.redirect(targetUrl); // Success! Proceed to the protected route
     } catch (err) {
       // Token is invalid/expired. Fall through to the refresh logic below.
     }
@@ -48,7 +49,7 @@ const verifyToken = async (req, res, next) => {
           maxAge: 604800000   // 7 days
         });     
 
-        return res.redirect(callbackUrl); // Success! Proceed to the protected route
+        return res.redirect(targetUrl); // Success! Proceed to the protected route
       }
     } catch (err) {
       console.error("Token renewal failed:", err.message);

@@ -9,7 +9,7 @@ const app = express();
 const port = process.env.PORT || 3006;
 const healthIdClientID = process.env.HEALTHID_CLIENT_ID;
 const authorizedUrl = process.env.AUTHORIZED_URL;
-const loginUrl = process.env.LOGIN_URL;
+const loginUrl = '/login';
 
 // Secret
 const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
@@ -22,7 +22,7 @@ app.use('/style', express.static(path.join(__dirname, 'style')));
 
 // --- ROUTES ---
 
-app.get('/clientID', verifyToken, (req, res) => {
+app.get('/clientID', (req, res) => {
   res.json({ "clientID": healthIdClientID });
 });
 
@@ -30,7 +30,7 @@ app.get('/', verifyToken, (req, res) => {
   res.sendFile(path.join(__dirname, '/html/login.html'));
 });
 
-app.post('/password', verifyToken, async (req, res) => {
+app.post('/password', async (req, res) => {
 
   const userAgent = req.headers['user-agent'];
   const { username, password, setCookie } = req.body;
@@ -82,7 +82,7 @@ app.post('/password', verifyToken, async (req, res) => {
 
 });
 
-app.get('/providerID', verifyToken, async (req, res) => {
+app.get('/providerID', async (req, res) => {
 
   const userAgent = req.headers['user-agent'];
 

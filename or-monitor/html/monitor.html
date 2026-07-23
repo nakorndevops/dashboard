@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Operation Monitor</title>
+    <link rel="icon" href="/or-monitor/image/favicon.ico" type="image/x-icon">
+    <style>
+        :root {
+            /* Color Palette */
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #aaaaaa;
+
+            /* Status Colors */
+            --status-waiting: #f39c12;   /* 1: Orange */
+            --status-operating: #e74c3c; /* 2: Red Pulse */
+            --status-finished: #27ae60;  /* 3: Green */
+            --status-ward: #8e44ad;      /* 4: Purple */
+            --status-home: #3498db;      /* 5: Blue */
+            --status-cancelled: #ffffff; /* 6: White Theme */
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Sarabun', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Full Screen Image Overlay --- */
+        #image-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            z-index: 9999; /* Ensures it sits on top of everything */
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+        }
+
+        #image-overlay img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Keeps aspect ratio */
+        }
+
+        /* --- Header --- */
+        header {
+            height: 12vh;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            background-color: #000;
+            border-bottom: 3px solid #444;
+        }
+
+        h1 { font-size: 3.2rem; font-weight: bold; color: #3498db; }
+        .clock { font-size: 2.5rem; font-weight: 300; }
+
+        /* --- Main Content (Grid) --- */
+        #monitor-container {
+            flex-grow: 1;
+            padding: 25px 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-auto-rows: min-content;
+            gap: 25px;
+            align-content: start;
+        }
+
+        /* --- Patient Card --- */
+        .patient-card {
+            background-color: var(--card-bg);
+            border-radius: 14px;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 8px rgba(0, 0, 0, 0.4);
+            border-left: 12px solid transparent;
+            height: 125px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .patient-info { display: flex; flex-direction: column; gap: 8px; }
+        .patient-name { font-size: 2.3rem; font-weight: bold; letter-spacing: 1px; }
+        .patient-hn { font-size: 1.5rem; color: var(--text-secondary); }
+
+        .status-badge {
+            font-size: 1.8rem;
+            padding: 10px 15px;
+            border-radius: 60px;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            min-width: 280px;
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+            white-space: nowrap;
+        }
+
+        /* --- Status Logic --- */
+        .st-waiting { border-left-color: var(--status-waiting); }
+        .st-waiting .status-badge { background-color: var(--status-waiting); color: #000; }
+
+        .st-operating { border-left-color: var(--status-operating); }
+        .st-operating .status-badge { background-color: var(--status-operating); animation: pulse 1.5s infinite; }
+
+        .st-finished { border-left-color: var(--status-finished); }
+        .st-finished .status-badge { background-color: var(--status-finished); }
+
+        .st-ward { border-left-color: var(--status-ward); }
+        .st-ward .status-badge { background-color: var(--status-ward); }
+
+        .st-home { border-left-color: var(--status-home); }
+        .st-home .status-badge { background-color: var(--status-home); }
+
+        .st-cancelled { border-left-color: var(--status-cancelled); }
+        .st-cancelled .status-badge { 
+            background-color: var(--status-cancelled); 
+            color: #c0392b; 
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4); 
+        }
+        .st-cancelled .patient-name { color: var(--text-primary); }
+
+        /* --- Footer --- */
+        footer {
+            height: 7vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #111;
+            font-size: 1.5rem;
+            color: #666;
+            border-top: 1px solid #333;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div id="image-overlay">
+        <img src="https://dhdoctor.tranghos.moph.go.th/or-monitor/manual" alt="Patient Monitor Manual">
+    </div>
+
+    <header>
+        <h1>สถานะผู้ป่วยผ่าตัด</h1>
+        <div class="clock" id="clock">00:00:00</div>
+    </header>
+
+    <div id="monitor-container">
+    </div>
+
+    <footer>
+        <span id="page-indicator">Loading...</span>
+    </footer>
+
+    <script>
+        // --- Configuration ---
+        const PAGE_DURATION = 8000;   // 8 Seconds per page
+        const ITEMS_PER_PAGE = 8;
+        const IMAGE_DURATION = 15000; // 15 Seconds for Image
+
+        // --- Global State ---
+        let rawData = [];
+        let currentPage = 0;
+        let totalPages = 1;
+        let pageCycleInterval = null;
+        let statusMap = {}; 
+
+        // --- API & Helper Functions ---
+        
+        async function getStatusList() {
+            try {
+                const responseList = await fetch("/or-monitor/statusList", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                });
+                const statusList = await responseList.json();
+                return statusList;
+            } catch (err) {
+                console.error("Error fetching status list:", err);
+                return [];
+            }
+        }
+
+        async function getPatientList() {
+            try {
+                const responseList = await fetch("/or-monitor/patientList", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                });
+                const patientList = await responseList.json();
+                return patientList;
+            } catch (err) {
+                console.error("Error fetching patient list:", err);
+                return [];
+            }
+        }        
+
+        // NEW: Load the statuses only once at startup
+        async function initializeStatusMap() {
+            const statuses = await getStatusList();
+            if (Array.isArray(statuses) && statuses.length > 0) {
+                statusMap = {}; 
+                statuses.forEach(status => {
+                    statusMap[status.status_id] = status.status_description;
+                });
+                console.log("Status map initialized:", statusMap);
+            }
+        }
+
+        async function fetchDataAndReload() {
+            // Fetch ONLY the patients now
+            const newData = await getPatientList();
+            if (Array.isArray(newData)) {
+                rawData = newData;
+                totalPages = Math.ceil(rawData.length / ITEMS_PER_PAGE) || 1;
+            }
+        }
+
+        function getStatusClass(statusId) {
+            const id = parseInt(statusId);
+            switch (id) {
+                case 1: return 'st-waiting';
+                case 2: return 'st-operating';
+                case 3: return 'st-finished';
+                case 4: return 'st-ward';
+                case 5: return 'st-home';
+                case 6: return 'st-cancelled';
+                default: return 'st-home';
+            }
+        }
+
+        function maskName(fname, lname) {
+            let f = fname ? fname : "";
+            let l = lname ? lname : "";
+            const maskedF = f.length > 3 ? f.substring(0, 3) + "**" : f + "*";
+            const maskedL = l.length > 3 ? l.substring(0, 3) + "**" : l + "*";
+            return `${maskedF} ${maskedL}`;
+        }
+
+        function maskHN(hn) {
+            if (!hn || hn.length < 3) return hn;
+            return hn.substring(0, hn.length - 3) + "XXX";
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('th-TH');
+        }
+
+        function renderPage(pageIndex) {
+            const container = document.getElementById('monitor-container');
+            const indicator = document.getElementById('page-indicator');
+            container.innerHTML = '';
+
+            if (rawData.length === 0) {
+                indicator.innerText = "ไม่พบข้อมูล";
+                return;
+            }
+
+            if (pageIndex >= totalPages) pageIndex = 0;
+
+            const start = pageIndex * ITEMS_PER_PAGE;
+            const end = start + ITEMS_PER_PAGE;
+            const pageData = rawData.slice(start, end);
+
+            pageData.forEach(patient => {
+                const card = document.createElement('div');
+                
+                const statusClass = getStatusClass(patient.status_id);
+                // Read from the global map initialized at startup
+                const statusText = statusMap[patient.status_id] || 'ไม่ระบุสถานะ'; 
+
+                card.className = `patient-card ${statusClass}`;
+                const maskedFullName = maskName(patient.fname, patient.lname);
+                const maskedHNNum = maskHN(patient.hn);
+
+                card.innerHTML = `
+                <div class="patient-info">
+                    <div class="patient-name">${maskedFullName}</div>
+                    <div class="patient-hn">HN: ${maskedHNNum}</div>
+                </div>
+                <div class="status-badge">
+                    ${statusText}
+                </div>
+            `;
+                container.appendChild(card);
+            });
+
+            indicator.innerText = `หน้า ${pageIndex + 1} จาก ${totalPages}`;
+        }
+
+        // --- Sequence Controller ---
+        async function startDisplayCycle() {
+            // PHASE 1: Show Image
+            const overlay = document.getElementById('image-overlay');
+            overlay.style.display = 'flex';
+
+            // While image is showing, fetch only patient data
+            await fetchDataAndReload();
+
+            // Wait for 15 seconds
+            setTimeout(() => {
+                // PHASE 2: Hide Image, Show Monitor
+                overlay.style.display = 'none';
+                
+                // Reset to first page
+                currentPage = 0;
+                renderPage(0);
+
+                // Start cycling through pages
+                if (pageCycleInterval) clearInterval(pageCycleInterval);
+
+                pageCycleInterval = setInterval(() => {
+                    currentPage++;
+                    
+                    // Check if we reached the end of the pages
+                    if (currentPage >= totalPages) {
+                        clearInterval(pageCycleInterval);
+                        // Loop back to Phase 1 (Image)
+                        startDisplayCycle();
+                    } else {
+                        // Show next page
+                        renderPage(currentPage);
+                    }
+                }, PAGE_DURATION);
+
+            }, IMAGE_DURATION);
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', async function () {
+            
+            // Start Clock
+            setInterval(updateClock, 1000);
+            updateClock();
+
+            // INITIALIZE STATUS MAP ONLY ONCE
+            await initializeStatusMap();
+
+            // START THE MAIN SEQUENCE (Image -> Pages -> Loop)
+            startDisplayCycle();
+        });
+
+    </script>
+
+</body>
+</html>

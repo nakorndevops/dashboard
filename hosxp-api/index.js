@@ -199,7 +199,7 @@ app.post("/authenPassword", verifyAPIkey, async (request, response) => {
     const [rows] = await pool.query(myQuery, [username]);
 
     if (rows.length === 0) {
-      return response.status(401).json({ error: "Invalid username or password or inactive account" });
+      return response.status(401).json({ error: "Invalid credentials" });
     }
 
     const user = rows[0];
@@ -218,7 +218,7 @@ app.post("/authenPassword", verifyAPIkey, async (request, response) => {
       return response.status(200).json(user);
     }
 
-    response.status(401).json({ error: "Invalid username or password" });
+    response.status(401).json({ error: "Invalid credentials" });
 
   } catch (err) {
 
@@ -721,6 +721,118 @@ app.post("/food", verifyAPIkey, async (request, response) => {
 
     if (rows.length === 0) {
       return response.status(404).json({ error: "No food list" });
+    }
+
+    response.status(200).json(rows);
+
+  } catch (err) {
+
+    console.error(err);
+
+    response.status(500).json({ error: "Error executing query" });
+
+  }
+
+});
+
+app.post("/getPatientOperationData", verifyAPIkey, async (request, response) => {
+
+  try {
+
+    const hn = request.body.hn;
+    if (!hn) {
+      return response.status(400).json({ error: "In complete variable" });
+    }
+
+    const myQuery = `
+      SELECT
+        CONCAT(DATE_FORMAT(ol.request_operation_date, '%d/%m/'), DATE_FORMAT(ol.request_operation_date, '%Y') + 543) AS operation_date,
+        ol.operation_id AS operation_id,
+        ol.patient_department AS department,
+        ol.hn,
+        w.NAME AS ward,
+        ol.an,
+        p.pname,
+        p.fname,
+        p.lname,
+        (SELECT image FROM patient_image WHERE hn = ol.hn LIMIT 1) AS image,
+        ol.age_text AS age,
+        GROUP_CONCAT(DISTINCT oicd.NAME SEPARATOR ', ') AS diagnosis,
+        ol.operation_name AS operation,
+        CONCAT(
+          TRIM(SUBSTRING_INDEX(d.NAME, ',', - 1)),
+          TRIM(SUBSTRING_INDEX(d.NAME, ',', 1))
+        ) AS doctor,
+        oroom.room_name AS room,
+        ol.room_id AS room_id
+      FROM
+        operation_list ol
+        LEFT JOIN doctor d ON ol.request_doctor = d.
+        CODE LEFT JOIN patient p ON ol.hn = p.hn
+        LEFT JOIN operation_room oroom ON ol.room_id = oroom.room_id
+        LEFT JOIN ipt i ON ol.an = i.an
+        LEFT JOIN ward w ON i.ward = w.ward
+        -- 5. Diagnosis Join with Filter
+        LEFT JOIN operation_diagnosis od ON ol.operation_id = od.operation_id
+        AND od.diagnosis_type_id = 1
+        LEFT JOIN operation_icd_10 oicd ON od.operation_icd10_id = oicd.id
+      WHERE
+        ol.hn = ?
+        -- 6. IPD Discharge Logic
+        AND (ol.patient_department != 'IPD' OR i.dchdate IS NULL)
+      GROUP BY
+        ol.operation_id
+      ORDER BY
+        ol.operation_id DESC
+        LIMIT 1;    
+    `;
+
+    const [rows] = await pool.query(myQuery, [hn]);
+
+    if (rows.length === 0) {
+      return response.status(404).json({ error: `No operation data for HN: ${hn}` });
+    }
+
+    response.status(200).json(rows);
+
+  } catch (err) {
+
+    console.error(err);
+
+    response.status(500).json({ error: "Error executing query" });
+
+  }
+
+});
+
+// ICU List
+app.post("/icuBed", verifyAPIkey, async (request, response) => {
+
+  try {
+
+    const myQuery = `
+      SELECT
+        w.ward AS ward_code,
+        w.shortname AS ward_name,
+        w.bedcount AS total_beds,
+        COUNT(i.an) AS patient_count,
+        (w.bedcount - COUNT(i.an)) AS available_beds
+      FROM
+        ipt AS i
+        INNER JOIN ward AS w ON i.ward = w.ward
+      WHERE
+        i.ward IN (10, 17, 22, 24, 41, 53, 55)
+        AND i.dchdate IS NULL
+      GROUP BY
+        w.NAME
+      ORDER BY
+        available_beds;
+    `;
+
+    const [rows] = await pool.query(myQuery);
+
+    if (rows.length === 0) {
+      return response.status(404).json({ error: "No ICU beds found" });
     }
 
     response.status(200).json(rows);

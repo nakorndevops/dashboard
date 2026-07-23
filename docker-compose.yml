@@ -92,6 +92,46 @@ services:
       - ./jwt/nutrition/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
       - ./module/continueIfLogin.js:/usr/src/app/module/continueIfLogin.js
 
+  # Or Monitor Frontend
+  or-monitor:
+    <<: *node-service
+    build:
+      context: ./or-monitor
+      dockerfile: Dockerfile
+    container_name: or-monitor
+    depends_on:
+      redis-token:
+        condition: service_healthy
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/or-monitor/or-monitor.crt:/usr/src/app/ssl/or-monitor.crt:ro
+      - ./ssl/or-monitor/or-monitor.key:/usr/src/app/ssl/or-monitor.key:ro
+      - ./key/access-token/public.pem:/usr/src/app/access-token/public.pem:ro
+      - ./jwt/or-monitor/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
+      - ./module/continueIfLogin.js:/usr/src/app/module/continueIfLogin.js
+    secrets:
+      - or-monitor-db-password
+
+  # Or Checkpoint Frontend
+  or-checkpoint:
+    <<: *node-service
+    build:
+      context: ./or-checkpoint
+      dockerfile: Dockerfile
+    container_name: or-checkpoint
+    depends_on:
+      redis-token:
+        condition: service_healthy
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/or-checkpoint/or-checkpoint.crt:/usr/src/app/ssl/or-checkpoint.crt:ro
+      - ./ssl/or-checkpoint/or-checkpoint.key:/usr/src/app/ssl/or-checkpoint.key:ro
+      - ./key/access-token/public.pem:/usr/src/app/access-token/public.pem:ro
+      - ./jwt/or-checkpoint/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
+      - ./module/continueIfLogin.js:/usr/src/app/module/continueIfLogin.js
+    secrets:
+      - or-monitor-db-password      
+
   # Logout
   logout:
     <<: *node-service
@@ -309,11 +349,36 @@ services:
       - MYSQL_DATABASE=subscribe_db
       - MYSQL_USER=nakorn
       - MYSQL_PASSWORD_FILE=/run/secrets/subscribe-db-password
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
       - TZ=Asia/Bangkok
     volumes:
       - ./subscribe-db/my.cnf:/etc/mysql/my.cnf
       - ./subscribe-db/init.sql:/docker-entrypoint-initdb.d/init.sql
       - mysql-subscribe:/var/lib/mysql
+    networks:
+      - app-network
+
+  or-monitor-db:
+    image: mysql:9
+    container_name: or-monitor-db
+    restart: always
+    healthcheck:
+      test: ['CMD-SHELL', 'mysqladmin ping -h 127.0.0.1 -u nakorn --password="$$(cat /run/secrets/or-monitor-db-password)" --silent']
+      interval: 3s
+      retries: 5
+      start_period: 30s
+    secrets:
+      - or-monitor-db-password
+    environment:
+      - MYSQL_DATABASE=or_monitor_db
+      - MYSQL_USER=nakorn
+      - MYSQL_PASSWORD_FILE=/run/secrets/or-monitor-db-password
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+      - TZ=Asia/Bangkok
+    volumes:
+      - ./or-monitor-db/my.cnf:/etc/mysql/my.cnf
+      - ./or-monitor-db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql-or-monitor:/var/lib/mysql
     networks:
       - app-network
 
@@ -325,6 +390,8 @@ volumes:
     driver: local    
   mysql-subscribe:
     name: mysql-subscribe
+  mysql-or-monitor:
+    name: mysql-or-monitor
 
 # Network
 networks:
@@ -340,5 +407,7 @@ secrets:
     file: ./secrets/redis-subscribe.password
   subscribe-db-password:
     file: ./secrets/subscribe-db.password
+  or-monitor-db-password:
+    file: ./secrets/or-monitor-db.password
   hosxp-db-password:
     file: ./secrets/hosxp-db.password
