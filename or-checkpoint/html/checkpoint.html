@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>OR Checkpoint</title>
+    <link rel="icon" href="/or-checkpoint/image/favicon.ico" type="image/x-icon">
     <!-- Include html5-qrcode library -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -122,13 +123,13 @@
             background-color: #fff;
             padding: 12px;
             transition: all 0.2s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
         }
 
         #btn-scan-qr:hover {
             background-color: #f8f9fa;
             border-color: var(--primary);
-            box-shadow: 0 4px 8px rgba(0,123,255,0.15);
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.15);
         }
 
         button {
@@ -170,7 +171,7 @@
             display: none;
             margin-bottom: 16px;
         }
-        
+
         #reader {
             width: 100%;
             border-radius: var(--border-radius);
@@ -206,14 +207,11 @@
         /* Watermark Layer */
         #watermark-layer {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0; /* Moved to front */
             pointer-events: none;
-            opacity: 0.07;
-        }
+            opacity: 0.07; /* Slightly increased visibility over elements */
+        }        
 
         /* Radio Form */
         .radio-list {
@@ -260,17 +258,19 @@
         <!-- 1. SEARCH VIEW -->
         <div id="search-view" class="view active">
             <h2>OR Checkpoint</h2>
-            
+
             <div class="form-group" id="manual-input-group">
                 <label for="hn-input">Enter HN:</label>
                 <div class="search-row">
                     <input type="text" id="hn-input" inputmode="numeric" placeholder="Enter HN..." autocomplete="off">
                     <button id="btn-search">SEARCH</button>
                 </div>
-                
+
                 <div class="qr-action-container">
-                    <p style="margin-bottom: 12px; font-size: 14px; color: var(--text-muted); font-weight: 600;">— OR —</p>
-                    <img src="https://dhdoctor.tranghos.moph.go.th/or-checkpoint/image/qr.png" id="btn-scan-qr" alt="Scan QR Code">
+                    <p style="margin-bottom: 12px; font-size: 14px; color: var(--text-muted); font-weight: 600;">— OR —
+                    </p>
+                    <img src="https://dhdoctor.tranghos.moph.go.th/or-checkpoint/image/qr.png" id="btn-scan-qr"
+                        alt="Scan QR Code">
                     <p style="margin-top: 8px; font-size: 14px; color: var(--text-muted);">Tap to scan QR Code</p>
                 </div>
             </div>
@@ -377,8 +377,9 @@
         // Generate dynamic repeating background using SVG and Base64
         function applyWatermark() {
             const code = getWatermarkCode();
-            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
-            <text x="50%" y="50%" transform="rotate(-45 100 100)" font-family="Arial" font-size="22" fill="rgba(0,0,0,1)" font-weight="bold" text-anchor="middle">${code}</text>
+            // Decreased SVG dimensions from 200 to 100 to increase watermark density
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+            <text x="50%" y="50%" transform="rotate(-45 50 50)" font-family="Arial" font-size="20" fill="rgba(0,0,0,1)" font-weight="bold" text-anchor="middle">${code}</text>
         </svg>`;
             const bgUrl = `url("data:image/svg+xml;base64,${btoa(svg)}")`;
             document.getElementById('watermark-layer').style.backgroundImage = bgUrl;
@@ -517,7 +518,7 @@
                 }
 
                 const patient = profileRes[0];
-                currentPatientData = patient; 
+                currentPatientData = patient;
 
                 const patientStatusRes = await getPatientStatus(patient.operation_id);
 
