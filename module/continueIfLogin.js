@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const fs = require('node:fs');
+import jwt from 'jsonwebtoken';
+import fs from 'node:fs';
 
 const refreshTokenRenewURL = process.env.REFRESH_TOKEN_RENEW_URL;
 const loginURL = '/login';
@@ -27,7 +27,7 @@ const verifyToken = async (req, res, next) => {
   }
 
   // 1. Check if the user's position_id is in the allowed permission group
-  if(permissionGroup.length > 0 ) {
+  if(permissionGroup.length > 0 && profile) {
     if(!permissionGroup.includes(profile.position_id)) {
       return res.redirect('/403');
     }
@@ -82,4 +82,5 @@ const verifyToken = async (req, res, next) => {
   return res.redirect(redirectUrl);
 };
 
-module.exports = verifyToken;
+// Use ES Module export default instead of module.exports
+export default verifyToken;

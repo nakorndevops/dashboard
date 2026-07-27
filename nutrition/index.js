@@ -1,9 +1,16 @@
-const path = require('node:path');
-const https = require('node:https');
-const fs = require('node:fs');
-const express = require('express');
-const cookieParser = require('cookie-parser');
-const verifyToken = require('./module/continueIfLogin.js');
+import path, { dirname } from 'node:path';
+import https from 'node:https';
+import fs from 'node:fs';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import { fileURLToPath } from 'node:url';
+
+// Import local modules (make sure the file extension is included, e.g., .js)
+import verifyToken from './module/continueIfLogin.js';
+
+// Reconstruct __dirname for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Secret
 const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
@@ -26,8 +33,7 @@ app.get('/', verifyToken, (req, res) => {
 });
 
 app.post('/wardList', verifyToken, async (req, res) => {
-
-    const getWardList = await fetch(hosxpApiUrl+'/wardList', {
+    const getWardList = await fetch(hosxpApiUrl + '/wardList', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -44,8 +50,7 @@ app.post('/wardList', verifyToken, async (req, res) => {
 });
 
 app.post('/mealList', verifyToken, async (req, res) => {
-
-    const getMealList = await fetch(hosxpApiUrl+'/mealList', {
+    const getMealList = await fetch(hosxpApiUrl + '/mealList', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -62,8 +67,7 @@ app.post('/mealList', verifyToken, async (req, res) => {
 });
 
 app.post('/nutritionTypeList', verifyToken, async (req, res) => {
-
-    const getNutritionTypeList = await fetch(hosxpApiUrl+'/nutritionTypeList', {
+    const getNutritionTypeList = await fetch(hosxpApiUrl + '/nutritionTypeList', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -87,7 +91,7 @@ app.post('/food', verifyToken, async (req, res) => {
         return res.status(400).json({ error: "Ward and Meal are required" });
     }
 
-    const getFood = await fetch(hosxpApiUrl+'/food', {
+    const getFood = await fetch(hosxpApiUrl + '/food', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

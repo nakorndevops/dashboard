@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import mysql from 'mysql2/promise';
 import { createClient } from 'redis';
+import { getSecret } from './module/getSecret.js';
 
 // Define configuration constants
 const CHECK_INTERVAL_MS = 60000; // Check every 1 minutes
@@ -16,19 +17,6 @@ try {
 } catch (err) {
     console.error("CRITICAL: Failed to read client secret:", err.message);
     process.exit(1);
-}
-
-// Helper function to read secrets securely
-function getSecret(filePath, secretName) {
-    try {
-        const secret = fs.readFileSync(filePath, 'utf8').trim();
-        if (!secret) throw new Error("File is empty");
-        console.log(`Successfully read ${secretName} from secret.`);
-        return secret;
-    } catch (err) {
-        console.error(`CRITICAL: Failed to read ${secretName}:`, err.message);
-        process.exit(1);
-    }
 }
 
 // Read Secrets

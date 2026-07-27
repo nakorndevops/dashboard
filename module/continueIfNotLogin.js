@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const fs = require('node:fs');
+import jwt from 'jsonwebtoken';
+import fs from 'node:fs';
 
 const refreshTokenRenewURL = process.env.REFRESH_TOKEN_RENEW_URL;
 const accessTokenPublicKey = fs.readFileSync('./access-token/public.pem', 'utf8');
@@ -63,4 +63,4 @@ const verifyToken = async (req, res, next) => {
   next();
 };
 
-module.exports = verifyToken;
+export default verifyToken;

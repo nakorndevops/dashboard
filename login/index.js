@@ -1,9 +1,14 @@
-const path = require('node:path');
-const https = require('node:https');
-const fs = require('node:fs');
-const express = require('express');
-const cookieParser = require('cookie-parser');
-const verifyToken = require('./module/continueIfNotLogin.js');
+import path, { dirname } from 'node:path';
+import https from 'node:https';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import verifyToken from './module/continueIfNotLogin.js';
+
+// Recreate __dirname and __filename for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3006;
@@ -85,10 +90,9 @@ app.post('/password', async (req, res) => {
 app.get('/providerID', async (req, res) => {
 
   const userAgent = req.headers['user-agent'];
-
   const targetUrl = req.query.target || '/';
-
   const code = req.query.code;
+
   if (!code) {
     console.log('No code provided in query parameters');
     return res.status(400).redirect(`${loginUrl}?targetUrl=${encodeURIComponent(targetUrl)}`);

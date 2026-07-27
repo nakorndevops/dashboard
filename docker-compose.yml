@@ -109,6 +109,7 @@ services:
       - ./key/access-token/public.pem:/usr/src/app/access-token/public.pem:ro
       - ./jwt/or-monitor/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
       - ./module/continueIfLogin.js:/usr/src/app/module/continueIfLogin.js
+      - ./module/getSecret.js:/usr/src/app/module/getSecret.js
     secrets:
       - or-monitor-db-password
 
@@ -129,6 +130,7 @@ services:
       - ./key/access-token/public.pem:/usr/src/app/access-token/public.pem:ro
       - ./jwt/or-checkpoint/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
       - ./module/continueIfLogin.js:/usr/src/app/module/continueIfLogin.js
+      - ./module/getSecret.js:/usr/src/app/module/getSecret.js
     secrets:
       - or-monitor-db-password      
 
@@ -250,6 +252,7 @@ services:
         condition: service_healthy
     volumes:
       - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./module/getSecret.js:/usr/src/app/module/getSecret.js
     secrets:
       - redis-subscribe
       - subscribe-db-password
@@ -268,6 +271,7 @@ services:
     volumes:
       - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
       - ./jwt/monitor-drug/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
+      - ./module/getSecret.js:/usr/src/app/module/getSecret.js
     secrets:
       - redis-subscribe
       - hosxp-db-password
@@ -285,6 +289,7 @@ services:
     volumes:
       - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
       - ./jwt/monitor-appointment/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
+      - ./module/getSecret.js:/usr/src/app/module/getSecret.js
     secrets:
       - subscribe-db-password
       - hosxp-db-password

@@ -1,7 +1,12 @@
-const path = require('node:path');
-const https = require('node:https');
-const fs = require('node:fs');
-const express = require('express');
+import path from 'node:path';
+import https from 'node:https';
+import fs from 'node:fs';
+import express from 'express';
+import { fileURLToPath } from 'node:url';
+
+// Recreate __dirname for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Read .env
 const port = process.env.PORT || 3006;

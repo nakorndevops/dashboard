@@ -1,28 +1,23 @@
-const path = require('node:path');
-const https = require('node:https');
-const fs = require('node:fs');
-const express = require('express');
-const cookieParser = require('cookie-parser');
-const verifyToken = require('./module/continueIfLogin.js');
-const mysql = require('mysql2/promise');
+import path from 'node:path';
+import https from 'node:https';
+import fs from 'node:fs';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import mysql from 'mysql2/promise';
+import { fileURLToPath } from 'node:url';
+
+// Import local modules
+import verifyToken from './module/continueIfLogin.js';
+import { getSecret } from './module/getSecret.js';
+
+// Recreate __dirname in ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Secret
 const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
 
-// Helper function to read secrets securely
-function getSecret(filePath, secretName) {
-  try {
-    const secret = fs.readFileSync(filePath, 'utf8').trim();
-    if (!secret) throw new Error("File is empty");
-    console.log(`Successfully read ${secretName} from secret.`);
-    return secret;
-  } catch (err) {
-    console.error(`CRITICAL: Failed to read ${secretName}:`, err.message);
-    process.exit(1);
-  }
-}
-
-// Get Monitor DB password from Docker secret
+// Get Monitor DB password from Docker secret using the imported module
 const monitorDBPassword = getSecret('/run/secrets/or-monitor-db-password', 'Monitor DB password');
 
 const app = express();
@@ -35,7 +30,7 @@ app.use(cookieParser());
 app.use('/image', express.static(path.join(__dirname, 'image')));
 app.use('/style', express.static(path.join(__dirname, 'style')));
 
-// MysQL Connection Pool
+// MySQL Connection Pool
 const orMonitorDb = mysql.createPool({
   host: process.env.MONITOR_DB_HOST,
   user: process.env.MONITOR_DB_USER,
@@ -56,7 +51,6 @@ app.post('/getPatientProfile', verifyToken, async (req, res) => {
   const { hn } = req.body;
 
   try {
-
     const getProfile = await fetch(hosxpApiUrl + '/getPatientOperationData', {
       method: 'POST',
       headers: {
@@ -71,43 +65,30 @@ app.post('/getPatientProfile', verifyToken, async (req, res) => {
     res.status(getProfile.status).json(profile);
 
   } catch (err) {
-
     console.error(err);
-
     res.status(500).json({ error: "Internal Server Error" });
-
   }
-
 });
 
 app.post('/getPatientStatus', verifyToken, async (req, res) => {
-
   const { operation_id } = req.body;
 
   try {
-
     const myQuery = `SELECT status_id FROM operation_status where operation_id = ?;`;
-
     const [rows] = await orMonitorDb.query(myQuery, [operation_id]);
 
     res.status(200).json(rows);
 
   } catch (err) {
-
     console.error(err);
-
     res.status(500).json({ error: "Internal Server Error" });
-
   }
-
 });
 
 app.post('/setPatientStatus', verifyToken, async (req, res) => {
-
   const { operation_id, hn, fname, lname, status_id, room_id } = req.body;
 
   try {
-
     const myQuery = `
       INSERT INTO operation_status (operation_id, hn, fname, lname, status_id, room_id)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -120,13 +101,9 @@ app.post('/setPatientStatus', verifyToken, async (req, res) => {
     res.status(200).json({ message: "Data updated successfully." });
 
   } catch (err) {
-
     console.error(err);
-
     res.status(500).json({ error: "Internal Server Error" });
-
   }
-
 });
 
 // --- SERVER INITIALIZATION ---

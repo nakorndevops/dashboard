@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import mysql from 'mysql2/promise';
+import { getSecret } from './module/getSecret.js';
 
 // --- Configuration & Secrets ---
 const POLLING_INTERVAL_MS = 10000; // Poll every 10 seconds
@@ -16,8 +17,8 @@ try {
 }
 
 // Read passwords from Docker secrets
-const regDBPassword = fs.readFileSync('/run/secrets/subscribe-db-password', 'utf8').trim();
-const hosxpPassword = fs.readFileSync('/run/secrets/hosxp-db-password', 'utf8').trim();
+const regDBPassword = getSecret('/run/secrets/subscribe-db-password', 'Subscribe DB password');
+const hosxpPassword = getSecret('/run/secrets/hosxp-db-password', 'HOSxP DB password');
 
 // --- Database Connections ---
 const subscribeDb = mysql.createPool({

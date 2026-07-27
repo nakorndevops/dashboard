@@ -755,6 +755,7 @@ app.post("/getPatientOperationData", verifyAPIkey, async (request, response) => 
         p.pname,
         p.fname,
         p.lname,
+        p.sex,
         (SELECT image FROM patient_image WHERE hn = ol.hn LIMIT 1) AS image,
         ol.age_text AS age,
         GROUP_CONCAT(DISTINCT oicd.NAME SEPARATOR ', ') AS diagnosis,

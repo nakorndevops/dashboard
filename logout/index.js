@@ -1,10 +1,15 @@
-const path = require('node:path');
-const https = require('node:https');
-const fs = require('node:fs');
-const express = require('express');
-const cookieParser = require('cookie-parser');
-const jwt = require('jsonwebtoken');
-const { createClient } = require('redis');
+import path from 'node:path';
+import https from 'node:https';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import jwt from 'jsonwebtoken';
+import { createClient } from 'redis';
+
+// Recreate __dirname and __filename for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cookieParser());

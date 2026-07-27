@@ -1,5 +1,6 @@
 {
   "name": "or-monitor",
+  "type": "module",
   "version": "1.0.0",
   "description": "Operating room monitor",
   "main": "index.js",

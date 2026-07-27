@@ -1,23 +1,11 @@
 import * as fs from 'fs';
 import mysql from 'mysql2/promise';
 import { createClient } from 'redis';
+import { getSecret } from './module/getSecret.js';
 
 // --- Configuration ---
 const POLLING_INTERVAL_MS = 60000; // 1 minutes
 let lastProcessedVn = '000000000000'; 
-
-// Helper function to read secrets securely
-function getSecret(filePath, secretName) {
-    try {
-        const secret = fs.readFileSync(filePath, 'utf8').trim();
-        if (!secret) throw new Error("File is empty");
-        console.log(`Successfully read ${secretName} from secret.`);
-        return secret;
-    } catch (err) {
-        console.error(`CRITICAL: Failed to read ${secretName}:`, err.message);
-        process.exit(1); 
-    }
-}
 
 // Read Secrets
 const hosxpPassword = getSecret('/run/secrets/hosxp-db-password', 'HOSxP DB password');

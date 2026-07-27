@@ -1,23 +1,18 @@
-const path = require('node:path');
-const https = require('node:https');
-const fs = require('node:fs');
-const express = require('express');
-const cookieParser = require('cookie-parser');
-const verifyToken = require('./module/continueIfLogin.js');
-const mysql = require('mysql2/promise');
+import path from 'node:path';
+import https from 'node:https';
+import fs from 'node:fs';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import mysql from 'mysql2/promise';
+import { fileURLToPath } from 'node:url';
 
-// Helper function to read secrets securely
-function getSecret(filePath, secretName) {
-    try {
-        const secret = fs.readFileSync(filePath, 'utf8').trim();
-        if (!secret) throw new Error("File is empty");
-        console.log(`Successfully read ${secretName} from secret.`);
-        return secret;
-    } catch (err) {
-        console.error(`CRITICAL: Failed to read ${secretName}:`, err.message);
-        process.exit(1); 
-    }
-}
+// Import local modules
+import verifyToken from './module/continueIfLogin.js';
+import { getSecret } from './module/getSecret.js';
+
+// Recreate __dirname and __filename for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Get Monitor DB password from Docker secret
 const monitorDBPassword = getSecret('/run/secrets/or-monitor-db-password', 'Monitor DB password');
@@ -54,47 +49,29 @@ app.get('/manual', (req, res) => {
 });
 
 app.post('/statusList', verifyToken, async (req, res) => {
-
   try {
-
     const myQuery = `select status_id, status_description from status_code;`;
-
     const [rows] = await orMonitorDb.query(myQuery);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: "No status found" });
     }
-
     res.status(200).json(rows);
-
   } catch (err) {
-
     console.error(err);
-
     res.status(500).json({ error: "Internal Server Error" });
-
   }
-
 });
 
 app.post('/patientList', verifyToken, async (req, res) => {
-
   try {
-
     const myQuery = `SELECT hn, fname, lname, status_id FROM operation_status;`;
-
     const [rows] = await orMonitorDb.query(myQuery);
-
     res.status(200).json(rows);
-
   } catch (err) {
-
     console.error(err);
-
     res.status(500).json({ error: "Internal Server Error" });
-
   }
-
 });
 
 // --- SERVER INITIALIZATION ---
