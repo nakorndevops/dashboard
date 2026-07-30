@@ -467,10 +467,6 @@
                     <p style="margin-top: 16px; font-size: 0.95rem; color: var(--text-muted); font-weight: 500;">Tap to
                         scan Patient QR Code</p>
                 </div>
-
-                <!-- ADDED LOGOUT BUTTON -->
-                <button onclick="window.location.href='/logout'" class="btn-danger" style="margin-top: 24px; background: white; color: var(--danger); border: 1px solid var(--danger);">Logout</button>
-                
             </div>
 
             <!-- QR Reader Container -->

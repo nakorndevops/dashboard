@@ -1,33 +1,31 @@
-import * as fs from "fs";
-import * as https from "https";
-import path from "path";
-import { fileURLToPath } from "url";
-import express from "express";
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import * as https from 'node:https';
+import * as fs from 'node:fs';
+import express from 'express';
 
+// 1. Import local modules
 import { verifyAPIkey } from './module/verifyApiKey.js';
 
-// 1. Properly resolve __dirname in ES Modules for file reading
+// 2. Recreate __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Read .env variables
+// 3. Get environment variables
 const port = process.env.PORT || 3006;
 const mophAlertUrl = process.env.MOPH_ALERT_URL;
 const clientKey = process.env.CLIENT_KEY;
 const secretKey = process.env.SECRET_KEY;
 
-// Optional but recommended: Warn if critical env vars are missing at startup
-if (!mophAlertUrl || !clientKey || !secretKey) {
-  console.warn("WARNING: Missing required environment variables (MOPH_ALERT_URL, CLIENT_KEY, SECRET_KEY).");
-}
-
+// 4. Middleware Setup
 const app = express();
 app.use(express.json());
 
-// Route
+// --- ROUTES ---
+
 app.post("/", verifyAPIkey, async (req, res) => {
   try {
-    // 2. Destructure the body with fallback default values
+    // Destructure the body with fallback default values
     const {
       cid = '',
       messages = '',
@@ -41,7 +39,7 @@ app.post("/", verifyAPIkey, async (req, res) => {
       return res.status(400).json({ error: "cid and messages are required" });
     }
 
-    // 3. Make the API request
+    // Make the API request
     const response = await fetch(mophAlertUrl, {
       method: 'POST',
       headers: {
@@ -60,7 +58,7 @@ app.post("/", verifyAPIkey, async (req, res) => {
       })
     });
 
-    // 4. Safely parse the response (APIs sometimes return HTML/Text on 500 errors)
+    // Safely parse the response (APIs sometimes return HTML/Text on 500 errors)
     let responseData;
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
@@ -69,7 +67,7 @@ app.post("/", verifyAPIkey, async (req, res) => {
       responseData = { message: await response.text() };
     }
 
-    // 5. Use response.ok to cover all 2xx success status codes
+    // Use response.ok to cover all 2xx success status codes
     if (!response.ok) {
       console.error(`External API Error [${response.status}]:`, responseData);
       return res.status(response.status).json(responseData);
@@ -78,7 +76,7 @@ app.post("/", verifyAPIkey, async (req, res) => {
     return res.status(200).json(responseData);
 
   } catch (error) {
-    // 6. Catch network failures, DNS issues, or timeouts
+    // Catch network failures, DNS issues, or timeouts
     console.error("Internal Server Error:", error);
     return res.status(500).json({ 
       error: "An internal server error occurred while contacting the alert service." 
@@ -86,6 +84,7 @@ app.post("/", verifyAPIkey, async (req, res) => {
   }
 });
 
+/*
 // Server configuration
 // 7. Use absolute paths to guarantee the certs are found regardless of the working directory
 const options = {
@@ -96,5 +95,17 @@ const options = {
 const server = https.createServer(options, app);
 
 server.listen(port, () => {
+  console.log(`App listening on PORT: ${port}`);
+});
+*/
+
+// --- SERVER INITIALIZATION ---
+
+const options = {
+  key: fs.readFileSync(path.join(__dirname, "ssl", "moph-alert.key")),
+  cert: fs.readFileSync(path.join(__dirname, "ssl", "moph-alert.crt")),
+};
+
+https.createServer(options, app).listen(port, () => {
   console.log(`App listening on PORT: ${port}`);
 });

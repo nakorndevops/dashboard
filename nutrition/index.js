@@ -5,21 +5,22 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import { fileURLToPath } from 'node:url';
 
-// Import local modules (make sure the file extension is included, e.g., .js)
+// 1. Import local modules
 import verifyToken from './module/continueIfLogin.js';
 
-// Reconstruct __dirname for ES Modules
+// 2. Recreate __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Secret
+// 3. Get Client Secret
 const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
 
-const app = express();
+// 4. Get environment variables
 const port = process.env.PORT || 3006;
 const hosxpApiUrl = process.env.HOSXP_API_URL;
 
-// Middleware Setup
+// 5. Middleware Setup
+const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use('/image', express.static(path.join(__dirname, 'image')));

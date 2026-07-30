@@ -1,29 +1,33 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import https from 'node:https';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 import { createClient } from 'redis';
 
-// Recreate __dirname and __filename for ES Modules
+// 1. Import local modules
+import { getSecret } from './module/getSecret.js';
+
+// 2. Recreate __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
-app.use(cookieParser());
+// 3. Get Docker secret
+const redisPassword = getSecret('/run/secrets/redis-token', 'Redis password');
+
+// 4. Get environment variables
 const port = process.env.PORT || 3006;
 
-let redisPassword = '';
-try {
-    redisPassword = fs.readFileSync('/run/secrets/redis-token', 'utf8').trim();
-} catch (err) {
-    console.error("CRITICAL: Failed to read Redis password from secret:", err.message);
-    process.exit(1); // Stop the app if it can't get the password
-}
-console.log(redisPassword ? "Successfully read Redis password from secret." : "Redis password is empty!");
+// 5. Middleware Setup
+const app = express();
+app.use(express.json());
+app.use(cookieParser());
+app.use('/image', express.static(path.join(__dirname, 'image')));
+app.use('/style', express.static(path.join(__dirname, 'style')));
 
+// 6. Redis Client Setup
 const redisClient = createClient({ 
     pingInterval: 240000, // Pings the server every 4 minutes to keep the connection active
     socket: {
@@ -39,16 +43,11 @@ const redisClient = createClient({
     password: redisPassword
 });
 
+// 7. Redis Event Handlers
 redisClient.on('error', err => console.error('Redis Client Error', err));
 redisClient.on('connect', () => console.log('Redis Client Connected'));
 redisClient.on('reconnecting', () => console.log('Redis Client Reconnecting...'));
-
 redisClient.connect().catch(console.error);
-
-// Middleware Setup
-app.use(express.json());
-app.use('/image', express.static(path.join(__dirname, 'image')));
-app.use('/style', express.static(path.join(__dirname, 'style')));
 
 // --- ROUTES ---
 

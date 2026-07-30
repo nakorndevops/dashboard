@@ -1,24 +1,31 @@
-import * as fs from "fs";
-import * as https from "https";
-import jwt from "jsonwebtoken";
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import https from "node:https";
+import fs from "node:fs";
 import express from "express";
-import { v4 as uuidv4 } from 'uuid';
+import jwt from "jsonwebtoken";
 import { createClient } from 'redis';
+import { v4 as uuidv4 } from 'uuid';
 
+// 1. Import local modules
 import { verifyAPIkey } from './module/verifyApiKey.js';
+import { getSecret } from './module/getSecret.js';
 
-// Read .env
+// 2. Recreate __dirname in ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 3. Get Docker secret
+const redisPassword = getSecret('/run/secrets/redis-token', 'Redis password');
+
+// 4. Get environment variables
 const port = process.env.PORT || 3006;
 
-let redisPassword = '';
-try {
-    redisPassword = fs.readFileSync('/run/secrets/redis-token', 'utf8').trim();
-} catch (err) {
-    console.error("CRITICAL: Failed to read Redis password from secret:", err.message);
-    process.exit(1); // Stop the app if it can't get the password
-}
-console.log(redisPassword ? "Successfully read Redis password from secret." : "Redis password is empty!");
+// 5. Middleware Setup
+const app = express();
+app.use(express.json());
 
+// 6. Redis Client Setup
 const redisClient = createClient({ 
     pingInterval: 240000, // Pings the server every 4 minutes to keep the connection active
     socket: {
@@ -34,20 +41,18 @@ const redisClient = createClient({
     password: redisPassword
 });
 
+// 7. Redis Event Handlers
 redisClient.on('error', err => console.error('Redis Client Error', err));
 redisClient.on('connect', () => console.log('Redis Client Connected'));
 redisClient.on('reconnecting', () => console.log('Redis Client Reconnecting...'));
-
 redisClient.connect().catch(console.error);
 
-// Read files (Adding 'utf8' ensures the keys are read as strings, which jwt.sign expects for RS256)
-// Key
+// 8. Read RSA keys for signing and verifying tokens
 const refreshTokenPrivateKey = fs.readFileSync('./refresh-token/private.pem', 'utf8');
 const refreshTokenPublicKey = fs.readFileSync('./refresh-token/public.pem', 'utf8');
 const accessTokenPrivateKey = fs.readFileSync('./access-token/private.pem', 'utf8');
 
-const app = express();
-app.use(express.json());
+// --- ROUTES ---
 
 app.post("/renew", verifyAPIkey, async (req, res) => {
 
@@ -136,14 +141,13 @@ app.post("/renew", verifyAPIkey, async (req, res) => {
 
 });
 
-// Server
+// --- SERVER INITIALIZATION ---
+
 const options = {
-    key: fs.readFileSync('./ssl/refresh-token-renewer.key', 'utf8'),
-    cert: fs.readFileSync('./ssl/refresh-token-renewer.crt', 'utf8'),
+  key: fs.readFileSync(path.join(__dirname, "ssl", "refresh-token-renewer.key")),
+  cert: fs.readFileSync(path.join(__dirname, "ssl", "refresh-token-renewer.crt")),
 };
 
-const server = https.createServer(options, app);
-
-server.listen(port, () => {
-    console.log(`App listening on PORT: ${port}`);
+https.createServer(options, app).listen(port, () => {
+  console.log(`App listening on PORT: ${port}`);
 });

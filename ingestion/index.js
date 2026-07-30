@@ -1,18 +1,22 @@
 import * as fs from 'fs';
 import mysql from 'mysql2/promise';
 import { createClient } from 'redis';
+
+// 1. Import local modules
 import { getSecret } from './module/getSecret.js';
 
-// --- Configuration ---
-const POLLING_INTERVAL_MS = 60000; // 1 minutes
-let lastProcessedVn = '000000000000'; 
-
-// Read Secrets
+// 2. Get Docker secret
 const hosxpPassword = getSecret('/run/secrets/hosxp-db-password', 'HOSxP DB password');
 const regDBPassword = getSecret('/run/secrets/subscribe-db-password', 'Registration DB password');
 const redisPassword = getSecret('/run/secrets/redis-subscribe', 'Redis password');
 
-// --- Database Connections ---
+// 3. Get environment variables
+const pollingInterval = parseInt(process.env.POLLING_INTERVAL_MS) || 60000; // 1 minutes
+
+// 4. Global variable setting
+let lastProcessedVn = '000000000000';
+
+// 5. Redis Client Setup
 const redisClient = createClient({
     socket: {
         host: 'redis-subscribe',
@@ -21,9 +25,11 @@ const redisClient = createClient({
     password: redisPassword
 });
 
+// 6. Redis Event Handlers
 redisClient.on('error', err => console.error('Redis Client Error', err));
 redisClient.on('connect', () => console.log('Redis Client Connected'));
 
+// 7. MySQL Connection Pool
 const hosDb = mysql.createPool({
     host: process.env.HOSXP_HOST,
     user: process.env.HOSXP_USER,
@@ -42,6 +48,7 @@ const regDb = mysql.createPool({
 });
 
 // --- Core Logic ---
+
 async function poll() {
     try {
         console.log(`Polling HOS DB for new visits from VN: ${lastProcessedVn} ...`);
@@ -100,7 +107,7 @@ async function poll() {
     } catch (error) {
         console.error("Error during ingestion cycle:", error);
     } finally {
-        setTimeout(poll, POLLING_INTERVAL_MS);
+        setTimeout(poll, pollingInterval);
     }
 }
 

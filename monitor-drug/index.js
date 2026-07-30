@@ -1,29 +1,22 @@
 import * as fs from 'fs';
 import mysql from 'mysql2/promise';
 import { createClient } from 'redis';
+
+// 1. Import local modules
 import { getSecret } from './module/getSecret.js';
 
-// Define configuration constants
-const CHECK_INTERVAL_MS = 60000; // Check every 1 minutes
-const mophAlertUrl = process.env.MOPH_ALERT_URL;
+// 2. Get Client Secret
+const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
 
-console.log("Initializing Event Monitor Service...");
-
-// 1. Safely load secrets
-let clientSecret = '';
-
-try {
-    clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8').trim();
-} catch (err) {
-    console.error("CRITICAL: Failed to read client secret:", err.message);
-    process.exit(1);
-}
-
-// Read Secrets
+// 3. Get Docker secret
 const hosxpPassword = getSecret('/run/secrets/hosxp-db-password', 'HOSxP DB password');
 const redisPassword = getSecret('/run/secrets/redis-subscribe', 'Redis password');
 
-// 2. Initialize Redis Client
+// 4. Get environment variables
+const pollingInterval = parseInt(process.env.POLLING_INTERVAL_MS) || 60000; // Check every 1 minutes
+const mophAlertUrl = process.env.MOPH_ALERT_URL;
+
+// 5. Initialize Redis Client
 const redisClient = createClient({
     socket: {
         host: 'redis-subscribe', // Must match docker-compose container_name
@@ -33,7 +26,7 @@ const redisClient = createClient({
 });
 redisClient.on('error', err => console.error('Redis Client Error', err));
 
-// 3. Initialized mySQL connection pools (HOSxP)
+// 6. MySQL Connection Pool
 const hosDb = mysql.createPool({
     host: process.env.HOSXP_HOST,
     user: process.env.HOSXP_USER,
@@ -42,6 +35,10 @@ const hosDb = mysql.createPool({
     charset: process.env.HOSXP_CHAR_SET,
     connectionLimit: 10 // Added connection limit for safety
 });
+
+// --- Core Logic ---
+
+console.log("Initializing Event Monitor Service...");
 
 async function startMonitor() {
     // FIX: You must explicitly connect the client in Node Redis v4+
@@ -292,7 +289,7 @@ async function startMonitor() {
             console.error("Error during monitor cycle:", error);
         } finally {
             // Schedule the NEXT run only AFTER this run has completely finished
-            setTimeout(check, CHECK_INTERVAL_MS);
+            setTimeout(check, pollingInterval);
         }
     }
 

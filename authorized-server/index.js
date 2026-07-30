@@ -1,13 +1,22 @@
-import * as fs from "fs";
-import * as https from "https";
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import https from 'node:https';
+import fs from 'node:fs';
 import express from "express";
 import cookieParser from 'cookie-parser';
 
-// Import the new module
+// 1. Import local modules
 import { generateAuthTokens } from './module/tokenGenerator.js';
 import { verifyAPIkey } from './module/verifyApiKey.js';
 
-// Read .env
+// 2. Recreate __dirname in ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 3. Get Client Secret
+const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
+
+// 4. Get environment variables
 const port = process.env.PORT || 3006;
 const hosxpApiUrl = process.env.HOSXP_API_URL;
 const redirectUrl = process.env.REDIRECT_URL;
@@ -20,14 +29,13 @@ const providerSecretKey = process.env.PROVIDER_SECRET_KEY;
 const profileUrl = process.env.PROFILE_URL;
 const hospitalCode = process.env.HOSPITAL_CODE;
 
-// Secret
-const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
-
+// 5. Middleware Setup
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// Route
+// --- ROUTES ---
+
 app.post("/password", verifyAPIkey, async (req, res) => {
     const { username, password, userAgent } = req.body;
 
@@ -176,14 +184,13 @@ app.post('/providerID', verifyAPIkey, async (req, res) => {
 
 });
 
-// Server
+// --- SERVER INITIALIZATION ---
+
 const options = {
-    key: fs.readFileSync('./ssl/authorized-server.key', 'utf8'),
-    cert: fs.readFileSync('./ssl/authorized-server.crt', 'utf8'),
+  key: fs.readFileSync(path.join(__dirname, "ssl", "authorized-server.key")),
+  cert: fs.readFileSync(path.join(__dirname, "ssl", "authorized-server.crt")),
 };
 
-const server = https.createServer(options, app);
-
-server.listen(port, () => {
-    console.log(`App listening on PORT: ${port}`);
+https.createServer(options, app).listen(port, () => {
+  console.log(`App listening on PORT: ${port}`);
 });

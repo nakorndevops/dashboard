@@ -1,36 +1,37 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import https from 'node:https';
 import fs from 'node:fs';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import mysql from 'mysql2/promise';
-import { fileURLToPath } from 'node:url';
 
-// Import local modules
+// 1. Import local modules
 import verifyToken from './module/continueIfLogin.js';
 import { getSecret } from './module/getSecret.js';
 
-// Recreate __dirname in ES Modules
+// 2. Recreate __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Secret
+// 3. Get Client Secret
 const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
 
-// Get Monitor DB password from Docker secret using the imported module
+// 4. Get Docker secret
 const monitorDBPassword = getSecret('/run/secrets/or-monitor-db-password', 'Monitor DB password');
 
-const app = express();
+// 5. Get environment variables
 const port = process.env.PORT || 3006;
 const hosxpApiUrl = process.env.HOSXP_API_URL;
 
-// Middleware Setup
+// 6. Middleware Setup
+const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use('/image', express.static(path.join(__dirname, 'image')));
 app.use('/style', express.static(path.join(__dirname, 'style')));
 
-// MySQL Connection Pool
+// 7. MySQL Connection Pool
 const orMonitorDb = mysql.createPool({
   host: process.env.MONITOR_DB_HOST,
   user: process.env.MONITOR_DB_USER,

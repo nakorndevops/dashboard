@@ -1,30 +1,34 @@
-import * as fs from "fs";
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as https from "https";
+import * as fs from "fs";
 import crypto from 'node:crypto';
 import express from "express";
 import mysql from "mysql2/promise";
 
+// 1. Import local modules
 import { verifyAPIkey } from './module/verifyApiKey.js';
+import { getSecret } from './module/getSecret.js';
 
-// Read .env
-let hosxpPassword = '';
-try {
-    hosxpPassword = fs.readFileSync('/run/secrets/hosxp-db-password', 'utf8').trim();
-} catch (err) {
-    console.error("CRITICAL: Failed to read HOSxP DB password from secret:", err.message);
-    process.exit(1); // Stop the app if it can't get the password
-}
-console.log(hosxpPassword ? "Successfully read HOSxP DB password from secret." : "HOSxP DB password is empty!");
+// 2. Recreate __dirname in ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 3. Get Docker secret
+const hosxpPassword = getSecret('/run/secrets/hosxp-db-password', 'HOSxP DB password');
+
+// 4. Get environment variables
 const port = process.env.PORT || 3006;
 const hosxpHost = process.env.HOSXP_HOST;
 const hosxpUser = process.env.HOSXP_USER;
 const hosxpDatabase = process.env.HOSXP_DATABASE;
 const hosxpCharSet = process.env.HOSXP_CHAR_SET;
 
+// 5. Middleware Setup
 const app = express();
 app.use(express.json());
 
-// Create the connection pool. The pool-specific settings are the defaults
+// 6. MySQL Connection Pool
 const pool = mysql.createPool({
   host: hosxpHost,
   user: hosxpUser,
@@ -39,6 +43,8 @@ const pool = mysql.createPool({
   keepAliveInitialDelay: 0,
   charset: hosxpCharSet, // Set the character set here
 });
+
+// --- ROUTES ---
 
 // หาคนไข้ตาม ward
 app.post("/ward", verifyAPIkey, async (request, response) => {
@@ -875,14 +881,13 @@ function verifyStringHash(plainText, expectedHash) {
   return crypto.timingSafeEqual(bufferA, bufferB);
 }
 
-// Server
+// --- SERVER INITIALIZATION ---
+
 const options = {
-  key: fs.readFileSync('./ssl/hosxp-api.key', 'utf8'),
-  cert: fs.readFileSync('./ssl/hosxp-api.crt', 'utf8'),
+  key: fs.readFileSync(path.join(__dirname, "ssl", "hosxp-api.key")),
+  cert: fs.readFileSync(path.join(__dirname, "ssl", "hosxp-api.crt")),
 };
 
-const server = https.createServer(options, app);
-
-server.listen(port, () => {
+https.createServer(options, app).listen(port, () => {
   console.log(`App listening on PORT: ${port}`);
 });

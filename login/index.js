@@ -4,22 +4,25 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cookieParser from 'cookie-parser';
+
+// 1. Import local modules
 import verifyToken from './module/continueIfNotLogin.js';
 
-// Recreate __dirname and __filename for ES Modules
+// 2. Recreate __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const app = express();
+// 3. Get Client Secret
+const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
+
+// 4. Get environment variables
 const port = process.env.PORT || 3006;
 const healthIdClientID = process.env.HEALTHID_CLIENT_ID;
 const authorizedUrl = process.env.AUTHORIZED_URL;
 const loginUrl = '/login';
 
-// Secret
-const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
-
-// Middleware Setup
+// 5. Middleware Setup
+const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use('/image', express.static(path.join(__dirname, 'image')));

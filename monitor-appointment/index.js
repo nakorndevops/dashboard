@@ -1,26 +1,24 @@
 import * as fs from 'fs';
 import mysql from 'mysql2/promise';
+
+// 1. Import local modules
 import { getSecret } from './module/getSecret.js';
 
-// --- Configuration & Secrets ---
-const POLLING_INTERVAL_MS = 10000; // Poll every 10 seconds
-const mophAlertUrl = process.env.MOPH_ALERT_URL;
+// 2. Get Client Secret
+const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
 
-// Safely load secrets
-let clientSecret = '';
-
-try {
-    clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8').trim();
-} catch (err) {
-    console.error("CRITICAL: Failed to read client secret:", err.message);
-    process.exit(1);
-}
-
-// Read passwords from Docker secrets
+// 3. Get Docker secret
 const regDBPassword = getSecret('/run/secrets/subscribe-db-password', 'Subscribe DB password');
 const hosxpPassword = getSecret('/run/secrets/hosxp-db-password', 'HOSxP DB password');
 
-// --- Database Connections ---
+// 4. Get environment variables
+const pollingInterval = parseInt(process.env.POLLING_INTERVAL_MS) || 10000; // Poll every 10 seconds
+const mophAlertUrl = process.env.MOPH_ALERT_URL;
+
+// 5. Global variable setting
+let latest_oapp_id = null;
+
+// 6. MySQL Connection Pool
 const subscribeDb = mysql.createPool({
     host: process.env.SUBSCRIBE_DB_HOST,
     user: process.env.SUBSCRIBE_DB_USER,
@@ -38,8 +36,7 @@ const hosDb = mysql.createPool({
     connectionLimit: 10
 });
 
-// --- State Management ---
-let latest_oapp_id = null;
+// --- Core Logic ---
 
 // --- Helper: Send Message to MOPH Alert ---
 async function sendAlertMessage(appt) {
@@ -143,7 +140,7 @@ async function pollAppointments() {
     } finally {
         // 5. Schedule the next execution ONLY after this one completes
         // The finally block guarantees the loop continues even if an error occurs above
-        setTimeout(pollAppointments, POLLING_INTERVAL_MS);
+        setTimeout(pollAppointments, pollingInterval);
     }
 }
 

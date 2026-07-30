@@ -148,6 +148,7 @@ services:
       - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
       - ./ssl/logout/logout.crt:/usr/src/app/ssl/logout.crt:ro
       - ./ssl/logout/logout.key:/usr/src/app/ssl/logout.key:ro
+      - ./module/getSecret.js:/usr/src/app/module/getSecret.js
     secrets:
       - redis-token      
 
@@ -170,6 +171,7 @@ services:
       - ./key/access-token/private.pem:/usr/src/app/access-token/private.pem:ro
       - ./key/api-key/public.pem:/usr/src/app/api-key/public.pem:ro
       - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js
+      - ./module/getSecret.js:/usr/src/app/module/getSecret.js
     secrets:
       - redis-token
 
@@ -186,6 +188,7 @@ services:
       - ./ssl/hosxp-api/hosxp-api.key:/usr/src/app/ssl/hosxp-api.key:ro
       - ./key/api-key/public.pem:/usr/src/app/api-key/public.pem:ro
       - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js
+      - ./module/getSecret.js:/usr/src/app/module/getSecret.js
     secrets:
       - hosxp-db-password
 
