@@ -13,6 +13,7 @@ const verifyToken = async (req, res, next) => {
   // Isolated URL components
   const protocol = req.protocol;          // "http" or "https"
   const host = req.get('host');           // "localhost:3000" or "example.com"
+  const path = req.originalUrl;          // The original request path (e.g., "/dashboard")
   const mainPath = process.env.MAIN_PATH;
 
   // Construct the complete URL
@@ -20,16 +21,27 @@ const verifyToken = async (req, res, next) => {
 
   // Construct the redirect URL for login
   const redirectUrl = `${loginURL}?targetUrl=${targetUrl}`;
-  
+
   // 0. If no tokens exist, immediately reject and send to login
   if (!access_token && !refresh_token) {
-    return res.redirect(redirectUrl);
+    if (path === '/') {
+      return res.redirect(redirectUrl);
+    } else {
+      return res.status(401).json({ error: "Unauthorized. Please log in." });
+    }
   }
 
   // 1. Check if the user's position_id is in the allowed permission group
-  if(permissionGroup.length > 0 && profile) {
-    if(!permissionGroup.includes(profile.position_id)) {
-      return res.redirect('/403');
+  if (permissionGroup.length > 0 && profile) {
+    if (!permissionGroup.includes(profile.position_id)) {
+      if (path === '/') {
+        return res.redirect('/403');
+      } else {
+        return res.status(403).json({
+          "error": "Forbidden",
+          "error_description": "You do not have permission to access this resource."
+        });
+      }
     }
   }
 
@@ -62,10 +74,10 @@ const verifyToken = async (req, res, next) => {
         // Set new cookies
         res.cookie('access_token', accessToken, { ...cookieOptions, maxAge: 900000 }); // 15 mins
         res.cookie('refresh_token', refreshToken, { ...cookieOptions, maxAge: 604800000 }); // 7 days
-        res.cookie('profile', payload, { 
+        res.cookie('profile', payload, {
           httpOnly: false, // Allows client-side JS to read it
           maxAge: 604800000   // 7 days
-        });        
+        });
 
         return next(); // Success! Proceed to the protected route
       }
@@ -77,9 +89,16 @@ const verifyToken = async (req, res, next) => {
   // 4. If all checks fail (or fetch fails), reject and send to login
   res.clearCookie('access_token');
   res.clearCookie('refresh_token');
-  res.clearCookie('profile'); 
+  res.clearCookie('profile');
 
-  return res.redirect(redirectUrl);
+  if (path === '/') {
+    return res.redirect(redirectUrl);
+  } else {
+    return res.status(400).json({
+      "error": "invalid_grant",
+      "error_description": "The refresh token is invalid, expired, or revoked."
+    });
+  }
 };
 
 // Use ES Module export default instead of module.exports

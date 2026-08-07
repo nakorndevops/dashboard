@@ -1,16 +1,16 @@
-import path, { dirname } from 'node:path';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import https from 'node:https';
 import fs from 'node:fs';
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import { fileURLToPath } from 'node:url';
 
 // 1. Import local modules
 import verifyToken from './module/continueIfLogin.js';
 
 // 2. Recreate __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 // 3. Get Client Secret
 const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
@@ -28,7 +28,6 @@ app.use('/style', express.static(path.join(__dirname, 'style')));
 
 // --- ROUTES ---
 
-// Protected Route (Requires valid tokens)
 app.get('/', verifyToken, (req, res) => {
   res.sendFile(path.join(__dirname, '/html/food-dashboard.html'));
 });

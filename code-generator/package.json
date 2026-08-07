@@ -1,0 +1,15 @@
+{
+  "name": "nutrition",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Nutrition",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "bwip-js": "^4.11.2",
+    "qrcode": "^1.5.3"
+  }
+}

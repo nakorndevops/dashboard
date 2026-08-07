@@ -92,6 +92,17 @@ services:
       - ./jwt/nutrition/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
       - ./module/continueIfLogin.js:/usr/src/app/module/continueIfLogin.js
 
+  code-generator:
+    <<: *node-service
+    build:
+      context: ./code-generator
+      dockerfile: Dockerfile
+    container_name: code-generator
+    volumes:
+      - ./ssl/combine_ssl.pem:/usr/src/app/ssl/combine_ssl.pem:ro
+      - ./ssl/code-generator/code-generator.crt:/usr/src/app/ssl/code-generator.crt:ro
+      - ./ssl/code-generator/code-generator.key:/usr/src/app/ssl/code-generator.key:ro
+
   # Or Monitor Frontend
   or-monitor:
     <<: *node-service
@@ -226,6 +237,7 @@ services:
       - ./jwt/authorized-server/client-secret.jwt:/usr/src/app/jwt/client-secret.jwt:ro
       - ./module/tokenGenerator.js:/usr/src/app/module/tokenGenerator.js
       - ./module/verifyApiKey.js:/usr/src/app/module/verifyApiKey.js
+      - ./module/getSecret.js:/usr/src/app/module/getSecret.js
     secrets:
       - redis-token
 

@@ -214,8 +214,6 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
-
-
         table {
             border-collapse: separate;
             border-spacing: 0;
@@ -754,6 +752,8 @@
                 //raw = rawData;
                 currentRawData = rawData;
 
+                console.log(currentRawData);
+
                 const endTime = performance.now();
 
                 lastFetchTimeMs = Math.round(endTime - startTime);
@@ -1171,14 +1171,18 @@
                     <div class="label-box">
                         <div class="line"><strong>${labelDateStr} มื้อ ${mealName}</strong></div>
                         <div class="line"><strong>${wardStr}</strong></div>
-                        <div class="line">HN ${hn} <strong>เตียง ${bed}</strong></div>
+                        <div class="line"><strong>HN ${hn} เตียง ${bed}</strong></div>
                         <div class="line"><strong>${name}</strong></div>
                         <div class="line">อายุ ${ageStr} ${sexStr} ${religion}</div>
                         <div class="line">${type}</div>
                         <div class="line">${item}</div>
-                        ${comment ? `<div class="line">${comment}</div>` : ''}
-                    </div>
                 `;
+
+                if (comment || comment === 0) {
+                    labelsHTML += `<div class="line"><strong>${comment}</strong></div>`;
+                }
+
+                labelsHTML += "</div>";
             });
 
             const printWindow = window.open('', '_blank');
@@ -1191,7 +1195,10 @@
                     <meta charset="UTF-8">
                     <title>สติ๊กเกอร์อาหาร_${fileSafeTime}</title>
                     <style>
-                        @page { size: landscape; margin: 2mm; }
+                        /* ปรับตั้งค่าหน้ากระดาษสำหรับ Thermal Printer 80mm */
+                        @page { 
+                            margin: 2mm; 
+                        }
                         body { 
                             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
                             margin: 0; 
@@ -1200,19 +1207,25 @@
                             background: #fff;
                         }
                         .label-box {
-                            width: 55mm; 
+                            /* ปรับความกว้างให้พอดีกับกระดาษ 80mm */
+                            width: 76mm; 
                             margin: 0 auto;
-                            padding: 10px 0;
+                            padding: 12px 0;
                             box-sizing: border-box;
                             page-break-inside: avoid;
-                            font-size: 13px;
-                            line-height: 1.5;
-                        }
-                        .label-box:last-child {
-                            border-bottom: none;
+                            
+                            /* ปรับขนาดอักษรให้ใหญ่ขึ้น */
+                            font-size: 18px; 
+                            line-height: 1.4;
                         }
                         .line {
                             word-wrap: break-word;
+                            margin-bottom: 4px; /* เพิ่มระยะห่างระหว่างบรรทัดให้อ่านง่ายขึ้น */
+                        }
+                        
+                        /* เน้นตัวหนาให้เมนูอาหารและประเภท */
+                        .line:nth-last-child(2), .line:nth-last-child(3) {
+                            font-weight: bold;
                         }
                     </style>
                 </head>

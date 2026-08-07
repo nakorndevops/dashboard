@@ -1,10 +1,10 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import https from 'node:https';
 import fs from 'node:fs';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import mysql from 'mysql2/promise';
-import { fileURLToPath } from 'node:url';
 
 // 1. Import local modules
 import verifyToken from './module/continueIfLogin.js';

@@ -4,20 +4,17 @@ import { UAParser } from 'ua-parser-js';
 import { v4 as uuidv4 } from 'uuid';
 import { createClient } from 'redis';
 
-// 1. Read keys ONCE at startup
+// 1. Import local modules
+import { getSecret } from './getSecret.js';
+
+// 2. Read private keys ONCE at startup
 const refreshKey = fs.readFileSync('./refresh-token/private.pem', 'utf8');
 const accessKey = fs.readFileSync('./access-token/private.pem', 'utf8');
 
-// 2. Initialize and connect Redis ONCE
-let redisPassword = '';
-try {
-    redisPassword = fs.readFileSync('/run/secrets/redis-token', 'utf8').trim();
-} catch (err) {
-    console.error("CRITICAL: Failed to read Redis password from secret:", err.message);
-    process.exit(1); // Stop the app if it can't get the password
-}
-console.log(redisPassword ? "Successfully read Redis password from secret." : "Redis password is empty!");
+// 3. Get Docker secret
+const redisPassword = getSecret('/run/secrets/redis-token', 'Redis password');
 
+// 4. Redis Client Setup
 const redisClient = createClient({ 
     pingInterval: 240000, // Pings the server every 4 minutes to keep the connection active
     socket: {
@@ -33,10 +30,10 @@ const redisClient = createClient({
     password: redisPassword
 });
 
+// 5. Redis Event Handlers
 redisClient.on('error', err => console.error('Redis Client Error', err));
 redisClient.on('connect', () => console.log('Redis Client Connected'));
 redisClient.on('reconnecting', () => console.log('Redis Client Reconnecting...'));
-
 redisClient.connect().catch(console.error);
 
 /**

@@ -6,7 +6,7 @@
 set -euo pipefail
 
 # Configuration variables (readonly prevents accidental overwrites)
-readonly JWT_LIST=("authorized-server" "login" "nutrition" "monitor-drug" "monitor-appointment" "or-monitor" "or-checkpoint")
+readonly JWT_LIST=("authorized-server" "login" "nutrition" "monitor-drug" "monitor-appointment" "or-monitor" "or-checkpoint" "code-generator")
 
 # 2. INPUT VALIDATION: Ensure both arguments are provided
 if [ "$#" -ne 2 ]; then

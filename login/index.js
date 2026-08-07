@@ -1,7 +1,7 @@
-import path, { dirname } from 'node:path';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import https from 'node:https';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 
@@ -10,7 +10,7 @@ import verifyToken from './module/continueIfNotLogin.js';
 
 // 2. Recreate __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 // 3. Get Client Secret
 const clientSecret = fs.readFileSync('./jwt/client-secret.jwt', 'utf8');
